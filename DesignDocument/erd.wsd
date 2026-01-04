@@ -1,0 +1,414 @@
+@startuml
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+left to right direction
+title N9 ERD 
+
+entity Activity_Type {
+    Id: varchar [PK]
+    Activity Type: varchar [UK1]
+    Activity Name: varchar [UK2]
+}
+
+entity Content_Type {
+    Id: varchar [PK]
+    Content Type: varchar [UK1]
+    Content Name: varchar [UK2]
+}
+
+entity Admin_Activity {
+    Id: varchar [PK]
+    Username: varchar [FK]
+    Activity Type: varchar [FK]
+    Content Type: varchar [FK]
+    --
+    Content: varchar
+}
+
+entity Report_Type {
+    Id: varchar [PK]
+    Report Type: varchar [UK1]
+    Report Name: varchar [UK2]
+}
+
+entity Chapter_Report {
+    Id: varchar[PK]
+    Chapter Id: varchar[FK]
+    Report Type: varchar[FK]
+    Username: varchar[FK]
+    --
+    Title: varchar
+    Content: text
+}
+
+entity Event {
+    Id: varchar[PK]
+    Title: varchar
+    Description: varchar
+    Avatar File Id: varchar
+    Content: text
+    Start Date: timestamp
+    End Date: timestamp
+}
+
+entity File_Upload {
+    Id: varchar[PK]
+    File Name: varchar
+    File Url: varchar
+    File Type: varchar
+}
+
+entity Group {
+    Id: varchar[PK]
+    Group Owner: varchar[FK]
+    Group Vice Owner: varchar[FK]
+    --
+    Group Name: varchar
+    Description: varchar
+    Avatar Id: varchar
+    Access Type: varchar
+}
+
+entity Group_Member {
+    Id: varchar[PK]
+    Group Id: varchar[FK]
+    Username: varchar[FK]
+}
+
+entity Guideline {
+    Id: varchar[PK]
+    Title: varchar
+    Description: varchar
+}
+
+entity Level {
+    Id: varchar[PK]
+    Level Id: varchar[UK1]
+    Level Name: varchar[PK2]
+}
+
+entity Payment_History {
+    Id: varchar[PK]
+    Username: varchar[FK]
+    Payment Method: varchar[FK]
+    Discount Code: varchar[FK]
+}
+
+entity Payment_History_Detail {
+    Id: varchar[PK]
+    History Id: varchar[FK][UK1]
+    Story Id: varchar[FK][UK1]
+    --
+    Current Price: decimal
+    Cost: decimal
+}
+
+entity Payment_Method {
+    Id: varchar[PK]
+    Payment Method: varchar[UK1]
+    Name: varchar[UK2]
+}
+
+entity Discount_Code {
+    Id: varchar[PK]
+    Discount Code: varchar[UK1]
+    --
+    Discount Name: varchar
+    Avatar File Id: varchar
+    Description: varchar
+    Specified Payment Method: varchar
+    Specified Story Id: varchar
+    Start Date: timestamp
+    End Date: timestamp
+}
+
+entity Permission {
+    Id: varchar[PK]
+    Permission Code: varchar[UK1]
+    Permission Name: varchar[UK2]
+}
+
+entity Story {
+    Id: varchar [PK]
+    Story Code: varchar [UK1]
+    Author ID: varchar [FK]
+    --
+    Title: varchar
+    Avatar File Url: varchar
+    Description: varchar
+    Status Code: varchar
+    Created Date: timestamp
+    Created By: varchar
+    Last Modified Date: timestamp
+    Last Modified By: varchar
+}
+
+entity Story_Donate {
+    Id: varchar[PK]
+    Story Id: varchar[FK]
+    Username: varchar[FK]
+    Donate Point: varchar
+    Content: text
+}
+
+entity Story_Subscription {
+    Id: varchar[PK]
+    Story Id: varchar[FK][UK1]
+    Username: varchar[FK][UK1]
+    --
+    Send To Mail: boolean
+}
+
+entity Story_Report {
+    Id: varchar[PK]
+    Story Id: varchar[FK]
+    Report Type: varchar[FK]
+    Username: varchar[FK]
+    --
+    Title: varchar
+    Content: varchar
+}
+
+entity Author {
+    Id: varchar [PK]
+    Author Code: varchar [UK1]
+    --
+    Author Name: varchar
+    Author Avatar File Url: varchar
+    Description: text
+}
+
+entity Category {
+    Id: varchar [PK]
+    Category Code: varchar [UK1]
+    --
+    Category Name: varchar
+    Description: text
+    Created Date: timestamp
+    Created By: varchar
+    Last Modified Date: timestamp
+    Last Modified By: varchar
+}
+
+entity Story_Category {
+    Id: varchar [PK]
+    Story Id: varchar [UK1][FK]
+    Category Code: varchar [UK1][FK]
+}
+
+entity Chapter {
+    Id: varchar [PK]
+    Chapter Code: varchar [UK1]
+    Story Id: varchar [UK1][UK2][FK]
+    Chapter Index: int [UK2]
+    --
+    Chapter Name: varchar
+    Chapter Content: varchar
+    Created Date: timestamp
+    Created By: varchar
+    Last Modified Date: timestamp
+    Last Modified By: varchar
+}
+
+entity Account {
+    Id: varchar [PK]
+    Username: varchar [UK1]
+    Password: varchar 
+    Full Name: varchar
+    Birthday: date
+    Gender: varchar
+    Phone: varchar [UK2]
+    Email: varchar [UK3]
+    Address: varchar
+    Avatar File Url: varchar
+    Role Code: varchar
+    Status: int
+    Created Date: timestamp
+    Created By: varchar
+    Last Modified Date: timestamp
+    Last Modified By: varchar
+}
+
+entity Title {
+    Id: varchar[PK]
+    Title Code: varchar[UK1]
+    Title Name: varchar[UK2]
+}
+
+entity User_Activity {
+    Id: varchar[PK]
+    Username: varchar[FK]
+    Activity Type: varchar[FK]
+    --
+    Description: varchar
+}
+
+entity User_Favourite {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    Story Id: varchar[FK][UK1]
+    Favourite Status: boolean
+}
+
+entity User_Permission {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    Permission Code: varchar[FK][UK1]
+}
+
+entity User_Title {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    Title Code: varchar[FK][UK1]
+}
+
+entity User_Setting {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    Theme Code: varchar[FK]
+    Font: varchar
+    Font Size: integer
+    Scroll Speed: float
+}
+
+entity User_Notification {
+    Id: varchar[PK]
+    Username: varchar[FK]
+    Content: varchar[FK]
+    Checking Status: boolean    
+}
+
+entity Author_Subscription {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    Author Id: varchar[FK][UK1]
+    Send To Mail: boolean
+}
+
+entity User_Wallet {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    --
+    money: decimal
+    point: integer
+}
+
+entity User_Badge {
+    Id: varchar[PK]
+    Username: varchar[FK][UK1]
+    --
+    Archieve Date: timestamp
+    Archievement: varchar
+}
+
+entity Comment {
+    Id: varchar [PK]
+    Parents Comment Id: varchar [FK]
+    Story Id: varchar [FK]
+    Username: varchar [FK]
+    --
+    Content: text
+}
+
+entity Review {
+    Id: varchar [PK]
+    Story Id: varchar [FK]
+    Username: varchar [FK]
+    --
+    Title: varchar 
+    Content: varchar
+    Point: float
+    Created Date: timestamp
+    Created By: varchar
+    Last Modified Date: timestamp
+    Last Modified By: varchar
+}
+
+entity Role {
+    Role Code: varchar [PK]
+    Role Name: varchar [UK1]
+}
+
+entity Status {
+    Status Code: varchar [PK]
+    Status Name: varchar [UK1]
+}
+
+entity Story_Statistic {
+    Id: varchar [PK]
+    Story Id: varchar [UK1]
+    --
+    Average Point: float
+    Number Of Chapters: int 
+    Number Of Reviews: bigint
+    Number Of Views: bigint
+    Number Of Follows: bigint
+    Number Of Favourites: bigint
+}
+
+entity Story_Tag {
+    Id: varchar [PK]
+    Story Id: varchar [UK1]
+    Tag: varchar [UK1]
+}
+
+entity Reading_Progress {
+    Id: varchar [PK]
+    User Id: varchar [UK1]
+    Story Id: varchar [UK1]
+    --
+    Chapter Id: varchar
+    Last View At: timestamp
+
+}
+
+
+
+Story }o--|| Author
+Story ||--o{ Chapter
+Story ||--o{ Comment
+Story ||--|| Story_Statistic
+Story ||--o{ Story_Tag
+Story ||--o{ Story_Category
+Story ||--o{ Review
+Category ||--o{ Story_Category
+Account }o--|| Role
+Admin_Activity }o--|| Account
+Admin_Activity }o--|| Activity_Type
+Admin_Activity }o--|| Content_Type
+Story }o--|| Status
+Chapter}o--|| Status
+Chapter_Report }o--|| Chapter
+Payment_History }o--|| Discount_Code
+Group_Member }|--|| Group
+Account }o--|| Level
+Payment_History }o--|| Payment_Method
+Reading_Progress }o--|| Story
+Reading_Progress }o--|| Account
+Chapter_Report }o--|| Report_Type
+Story_Report }o--|| Report_Type
+Story_Donate }o--|| Story
+Story_Donate }o--|| Account
+Story_Subscription }o--|| Story
+Story_Subscription }o--|| Account
+Author_Subscription }o--|| Author
+Author_Subscription }o--|| Account
+User_Activity }o--|| Account
+User_Activity }o--|| Activity_Type
+User_Activity }o--|| Content_Type
+User_Favourite }o--|| Account
+User_Favourite }o--|| Story
+User_Permission }o--|| Account
+User_Permission }o--|| Permission
+User_Badge }o--|| Account
+User_Notification }o--|| Account
+User_Setting }o--|| Account
+User_Wallet }o--|| Account 
+User_Title }o--|| Account
+User_Title }o--|| Title
+Payment_History_Detail }|--|| Payment_History
+Payment_History_Detail }o--|| Story
+Group_Member }o--|| Account
+
+@enduml
