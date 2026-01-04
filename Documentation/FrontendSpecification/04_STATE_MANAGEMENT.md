@@ -1150,16 +1150,617 @@ export function StoryForm({ defaultValues, onSubmit }) {
 
 ---
 
-## 9. Revision History
+---
+
+## 9. Extended Query Keys (Aligned with Backend API Catalog)
+
+### 9.1 Complete Query Key Factory
+
+```typescript
+// lib/queryKeys.ts
+
+export const queryKeys = {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STORIES (Backend: 13_API_CATALOG - Stories APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  stories: {
+    all: ['stories'] as const,
+    lists: () => [...queryKeys.stories.all, 'list'] as const,
+    list: (filters: StoryFilters) => [...queryKeys.stories.lists(), filters] as const,
+    details: () => [...queryKeys.stories.all, 'detail'] as const,
+    detail: (slug: string) => [...queryKeys.stories.details(), slug] as const,
+    chapters: (storySlug: string) => [...queryKeys.stories.detail(storySlug), 'chapters'] as const,
+    reviews: (storySlug: string, filters?: ReviewFilters) => 
+      [...queryKeys.stories.detail(storySlug), 'reviews', filters] as const,
+    similar: (storySlug: string) => [...queryKeys.stories.detail(storySlug), 'similar'] as const,
+    stats: (storyId: string) => [...queryKeys.stories.detail(storyId), 'stats'] as const,
+    trending: () => [...queryKeys.stories.all, 'trending'] as const,
+    featured: () => [...queryKeys.stories.all, 'featured'] as const,
+    recommended: () => [...queryKeys.stories.all, 'recommended'] as const,
+    newReleases: () => [...queryKeys.stories.all, 'new-releases'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHAPTERS (Backend: 13_API_CATALOG - Chapters APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  chapters: {
+    all: ['chapters'] as const,
+    detail: (chapterId: string) => [...queryKeys.chapters.all, chapterId] as const,
+    content: (chapterId: string) => [...queryKeys.chapters.detail(chapterId), 'content'] as const,
+    comments: (chapterId: string, filters?: CommentFilters) => 
+      [...queryKeys.chapters.detail(chapterId), 'comments', filters] as const,
+    bookmarks: (chapterId: string) => [...queryKeys.chapters.detail(chapterId), 'bookmarks'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // USERS (Backend: 13_API_CATALOG - Users APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  users: {
+    all: ['users'] as const,
+    current: () => [...queryKeys.users.all, 'current'] as const,
+    preferences: () => [...queryKeys.users.all, 'preferences'] as const,
+    profile: (userId: string) => [...queryKeys.users.all, userId] as const,
+    stories: (userId: string, filters?: StoryFilters) => 
+      [...queryKeys.users.profile(userId), 'stories', filters] as const,
+    followers: (userId: string, page?: number) => 
+      [...queryKeys.users.profile(userId), 'followers', page] as const,
+    following: (userId: string, page?: number) => 
+      [...queryKeys.users.profile(userId), 'following', page] as const,
+    blocked: () => [...queryKeys.users.current(), 'blocked'] as const,
+    authorApplication: () => [...queryKeys.users.current(), 'author-application'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIBRARY (Backend: 05_READINGS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  library: {
+    all: ['library'] as const,
+    history: (page?: number) => [...queryKeys.library.all, 'history', page] as const,
+    bookmarks: (page?: number) => [...queryKeys.library.all, 'bookmarks', page] as const,
+    readingLists: () => [...queryKeys.library.all, 'reading-lists'] as const,
+    readingList: (id: string) => [...queryKeys.library.readingLists(), id] as const,
+    readingProgress: (storyId: string) => 
+      [...queryKeys.library.all, 'progress', storyId] as const,
+    streak: () => [...queryKeys.library.all, 'streak'] as const,
+    goals: () => [...queryKeys.library.all, 'goals'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INTERACTIONS (Backend: 04_INTERACTIONS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  interactions: {
+    all: ['interactions'] as const,
+    reviews: () => [...queryKeys.interactions.all, 'reviews'] as const,
+    myReview: (storyId: string) => [...queryKeys.interactions.reviews(), storyId] as const,
+    comments: () => [...queryKeys.interactions.all, 'comments'] as const,
+    commentReplies: (commentId: string) => 
+      [...queryKeys.interactions.comments(), commentId, 'replies'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAYMENTS (Backend: 03_PAYMENTS_COMPONENT, 13_API_CATALOG - Payments APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  payments: {
+    all: ['payments'] as const,
+    wallet: () => [...queryKeys.payments.all, 'wallet'] as const,
+    transactions: (filters?: TransactionFilters) => 
+      [...queryKeys.payments.all, 'transactions', filters] as const,
+    packages: () => [...queryKeys.payments.all, 'packages'] as const,
+    donationsSent: () => [...queryKeys.payments.all, 'donations-sent'] as const,
+    donationsReceived: () => [...queryKeys.payments.all, 'donations-received'] as const,
+    subscription: () => [...queryKeys.payments.all, 'subscription'] as const,
+    subscriptionPlans: () => [...queryKeys.payments.all, 'plans'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOTIFICATIONS (Backend: 07_NOTIFICATIONS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  notifications: {
+    all: ['notifications'] as const,
+    list: (page?: number) => [...queryKeys.notifications.all, 'list', page] as const,
+    unreadCount: () => [...queryKeys.notifications.all, 'unread-count'] as const,
+    settings: () => [...queryKeys.notifications.all, 'settings'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTHOR (Backend: 13_API_CATALOG - Author Payouts)
+  // ═══════════════════════════════════════════════════════════════════════════
+  author: {
+    all: ['author'] as const,
+    dashboard: () => [...queryKeys.author.all, 'dashboard'] as const,
+    stories: (filters?: AuthorStoryFilters) => 
+      [...queryKeys.author.all, 'stories', filters] as const,
+    story: (id: string) => [...queryKeys.author.stories(), id] as const,
+    analytics: (storyId?: string, period?: string) => 
+      storyId 
+        ? [...queryKeys.author.all, 'analytics', storyId, period] 
+        : [...queryKeys.author.all, 'analytics', period] as const,
+    earnings: () => [...queryKeys.author.all, 'earnings'] as const,
+    payouts: () => [...queryKeys.author.all, 'payouts'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEARCH (Backend: 13_API_CATALOG - Search APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  search: {
+    all: ['search'] as const,
+    results: (query: string, filters?: SearchFilters) => 
+      [...queryKeys.search.all, 'results', query, filters] as const,
+    stories: (query: string, filters?: SearchFilters) => 
+      [...queryKeys.search.all, 'stories', query, filters] as const,
+    authors: (query: string, page?: number) => 
+      [...queryKeys.search.all, 'authors', query, page] as const,
+    tags: (query: string) => [...queryKeys.search.all, 'tags', query] as const,
+    suggestions: (query: string) => 
+      [...queryKeys.search.all, 'suggestions', query] as const,
+    trending: () => [...queryKeys.search.all, 'trending'] as const,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN (Backend: 13_API_CATALOG - Admin APIs)
+  // ═══════════════════════════════════════════════════════════════════════════
+  admin: {
+    all: ['admin'] as const,
+    dashboard: () => [...queryKeys.admin.all, 'dashboard'] as const,
+    analytics: (period?: string) => [...queryKeys.admin.all, 'analytics', period] as const,
+    reports: (filters?: ReportFilters) => [...queryKeys.admin.all, 'reports', filters] as const,
+    report: (id: string) => [...queryKeys.admin.reports(), id] as const,
+    users: (filters?: UserFilters) => [...queryKeys.admin.all, 'users', filters] as const,
+    pendingPayouts: () => [...queryKeys.admin.all, 'payouts-pending'] as const,
+    categories: () => [...queryKeys.admin.all, 'categories'] as const,
+    auditLogs: (filters?: AuditLogFilters) => [...queryKeys.admin.all, 'audit-logs', filters] as const,
+  },
+} as const;
+```
+
+---
+
+## 10. Additional Client Stores
+
+### 10.1 WebSocket Store (Backend: 06_REALTIME_AND_EVENTS)
+
+```typescript
+// stores/webSocketStore.ts
+import { create } from 'zustand';
+import { wsClient } from '@/lib/websocket/client';
+
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+interface ChannelSubscription {
+  channel: 'user' | 'story' | 'chapter';
+  id: string;
+}
+
+interface WebSocketState {
+  // Connection state
+  status: ConnectionStatus;
+  error: string | null;
+  
+  // Active subscriptions
+  subscriptions: ChannelSubscription[];
+  
+  // Actions
+  connect: () => void;
+  disconnect: () => void;
+  setStatus: (status: ConnectionStatus) => void;
+  setError: (error: string | null) => void;
+  subscribe: (channel: ChannelSubscription['channel'], id: string) => void;
+  unsubscribe: (channel: ChannelSubscription['channel'], id: string) => void;
+}
+
+export const useWebSocketStore = create<WebSocketState>((set, get) => ({
+  status: 'disconnected',
+  error: null,
+  subscriptions: [],
+  
+  connect: () => {
+    set({ status: 'connecting', error: null });
+    
+    wsClient.connect();
+    
+    wsClient.on('connect', () => {
+      set({ status: 'connected' });
+      
+      // Resubscribe to channels after reconnect
+      const { subscriptions } = get();
+      subscriptions.forEach((sub) => {
+        wsClient.emit('subscribe', { channel: sub.channel, id: sub.id });
+      });
+    });
+    
+    wsClient.on('disconnect', () => {
+      set({ status: 'disconnected' });
+    });
+    
+    wsClient.on('error', (error) => {
+      set({ status: 'error', error: error.message });
+    });
+  },
+  
+  disconnect: () => {
+    wsClient.disconnect();
+    set({ status: 'disconnected', subscriptions: [] });
+  },
+  
+  setStatus: (status) => set({ status }),
+  
+  setError: (error) => set({ error }),
+  
+  subscribe: (channel, id) => {
+    const subscription = { channel, id };
+    
+    set((state) => ({
+      subscriptions: [...state.subscriptions, subscription],
+    }));
+    
+    if (get().status === 'connected') {
+      wsClient.emit('subscribe', subscription);
+    }
+  },
+  
+  unsubscribe: (channel, id) => {
+    set((state) => ({
+      subscriptions: state.subscriptions.filter(
+        (sub) => !(sub.channel === channel && sub.id === id)
+      ),
+    }));
+    
+    if (get().status === 'connected') {
+      wsClient.emit('unsubscribe', { channel, id });
+    }
+  },
+}));
+```
+
+### 10.2 Notification Store (Badge counts & real-time)
+
+```typescript
+// stores/notificationStore.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface NotificationState {
+  // State
+  unreadCount: number;
+  lastFetchedAt: string | null;
+  
+  // Actions
+  setUnreadCount: (count: number) => void;
+  incrementUnread: () => void;
+  decrementUnread: () => void;
+  markAllRead: () => void;
+  setLastFetched: () => void;
+}
+
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set) => ({
+      unreadCount: 0,
+      lastFetchedAt: null,
+      
+      setUnreadCount: (count) => set({ unreadCount: count }),
+      
+      incrementUnread: () => set((state) => ({ 
+        unreadCount: state.unreadCount + 1 
+      })),
+      
+      decrementUnread: () => set((state) => ({ 
+        unreadCount: Math.max(0, state.unreadCount - 1) 
+      })),
+      
+      markAllRead: () => set({ unreadCount: 0 }),
+      
+      setLastFetched: () => set({ 
+        lastFetchedAt: new Date().toISOString() 
+      }),
+    }),
+    {
+      name: 'n9-notifications',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+```
+
+### 10.3 Reading Progress Store (Local cache for offline support)
+
+```typescript
+// stores/readingProgressStore.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface LocalProgress {
+  storyId: string;
+  chapterId: string;
+  chapterIndex: number;
+  scrollPosition: number;
+  lastReadAt: string;
+}
+
+interface ReadingProgressState {
+  // Local progress cache (for offline support)
+  progress: Record<string, LocalProgress>;
+  
+  // Sync state
+  pendingSync: string[]; // Story IDs pending sync
+  
+  // Actions
+  updateLocalProgress: (storyId: string, data: Partial<LocalProgress>) => void;
+  markForSync: (storyId: string) => void;
+  clearPendingSync: (storyId: string) => void;
+  getProgress: (storyId: string) => LocalProgress | undefined;
+}
+
+export const useReadingProgressStore = create<ReadingProgressState>()(
+  persist(
+    (set, get) => ({
+      progress: {},
+      pendingSync: [],
+      
+      updateLocalProgress: (storyId, data) => {
+        set((state) => ({
+          progress: {
+            ...state.progress,
+            [storyId]: {
+              ...state.progress[storyId],
+              ...data,
+              storyId,
+              lastReadAt: new Date().toISOString(),
+            },
+          },
+          pendingSync: state.pendingSync.includes(storyId)
+            ? state.pendingSync
+            : [...state.pendingSync, storyId],
+        }));
+      },
+      
+      markForSync: (storyId) => {
+        set((state) => ({
+          pendingSync: state.pendingSync.includes(storyId)
+            ? state.pendingSync
+            : [...state.pendingSync, storyId],
+        }));
+      },
+      
+      clearPendingSync: (storyId) => {
+        set((state) => ({
+          pendingSync: state.pendingSync.filter((id) => id !== storyId),
+        }));
+      },
+      
+      getProgress: (storyId) => get().progress[storyId],
+    }),
+    {
+      name: 'n9-reading-progress',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+```
+
+### 10.4 Chapter Editor Store (Auto-save state)
+
+```typescript
+// stores/chapterEditorStore.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import debounce from 'lodash/debounce';
+
+interface EditorDraft {
+  chapterId: string;
+  title: string;
+  content: string;
+  wordCount: number;
+  lastSavedAt: string;
+}
+
+interface ChapterEditorState {
+  // Draft state
+  drafts: Record<string, EditorDraft>;
+  activeDraftId: string | null;
+  
+  // Editor state
+  isDirty: boolean;
+  isSaving: boolean;
+  lastError: string | null;
+  
+  // Actions
+  setActiveDraft: (chapterId: string) => void;
+  updateDraft: (chapterId: string, updates: Partial<EditorDraft>) => void;
+  saveDraft: (chapterId: string) => void;
+  deleteDraft: (chapterId: string) => void;
+  setDirty: (isDirty: boolean) => void;
+  setSaving: (isSaving: boolean) => void;
+  setError: (error: string | null) => void;
+}
+
+export const useChapterEditorStore = create<ChapterEditorState>()(
+  persist(
+    (set, get) => ({
+      drafts: {},
+      activeDraftId: null,
+      isDirty: false,
+      isSaving: false,
+      lastError: null,
+      
+      setActiveDraft: (chapterId) => set({ 
+        activeDraftId: chapterId,
+        isDirty: false,
+      }),
+      
+      updateDraft: (chapterId, updates) => {
+        const wordCount = updates.content 
+          ? updates.content.trim().split(/\s+/).filter(Boolean).length
+          : get().drafts[chapterId]?.wordCount || 0;
+        
+        set((state) => ({
+          drafts: {
+            ...state.drafts,
+            [chapterId]: {
+              ...state.drafts[chapterId],
+              ...updates,
+              chapterId,
+              wordCount,
+              lastSavedAt: new Date().toISOString(),
+            },
+          },
+          isDirty: true,
+        }));
+      },
+      
+      saveDraft: (chapterId) => {
+        const draft = get().drafts[chapterId];
+        if (draft) {
+          // Save to localStorage is automatic via persist
+          set({ isDirty: false });
+        }
+      },
+      
+      deleteDraft: (chapterId) => {
+        set((state) => {
+          const { [chapterId]: _, ...remaining } = state.drafts;
+          return { 
+            drafts: remaining,
+            activeDraftId: state.activeDraftId === chapterId 
+              ? null 
+              : state.activeDraftId,
+          };
+        });
+      },
+      
+      setDirty: (isDirty) => set({ isDirty }),
+      setSaving: (isSaving) => set({ isSaving }),
+      setError: (lastError) => set({ lastError }),
+    }),
+    {
+      name: 'n9-chapter-drafts',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ drafts: state.drafts }),
+    }
+  )
+);
+```
+
+---
+
+## 11. State Synchronization Patterns
+
+### 11.1 Server/Client State Sync
+
+```typescript
+// hooks/useSyncNotifications.ts
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
+import { notificationService } from '@/features/notifications/api';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { useWebSocketStore } from '@/stores/webSocketStore';
+
+export function useSyncNotifications() {
+  const queryClient = useQueryClient();
+  const { setUnreadCount, incrementUnread } = useNotificationStore();
+  const wsStatus = useWebSocketStore((s) => s.status);
+  
+  // Fetch initial count
+  const { data: countData } = useQuery({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: () => notificationService.getUnreadCount(),
+    refetchInterval: 60000, // Poll every minute as fallback
+  });
+  
+  // Sync server state to client store
+  useEffect(() => {
+    if (countData?.count !== undefined) {
+      setUnreadCount(countData.count);
+    }
+  }, [countData, setUnreadCount]);
+  
+  // Handle real-time notifications
+  useEffect(() => {
+    if (wsStatus !== 'connected') return;
+    
+    const unsubscribe = wsClient.subscribe('NOTIFICATION', (notification) => {
+      // Update cache
+      queryClient.setQueryData(
+        queryKeys.notifications.list(),
+        (old: any) => ({
+          ...old,
+          data: [notification, ...(old?.data || [])],
+        })
+      );
+      
+      // Update local store
+      incrementUnread();
+    });
+    
+    return unsubscribe;
+  }, [wsStatus, queryClient, incrementUnread]);
+}
+```
+
+### 11.2 Offline Progress Sync
+
+```typescript
+// hooks/useSyncReadingProgress.ts
+import { useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useReadingProgressStore } from '@/stores/readingProgressStore';
+import { readingProgressService } from '@/features/readings/api';
+import { queryKeys } from '@/lib/queryKeys';
+
+export function useSyncReadingProgress() {
+  const isOnline = useOnlineStatus();
+  const queryClient = useQueryClient();
+  const { pendingSync, progress, clearPendingSync } = useReadingProgressStore();
+  
+  const syncMutation = useMutation({
+    mutationFn: async (storyId: string) => {
+      const localProgress = progress[storyId];
+      if (!localProgress) return;
+      
+      return readingProgressService.updateProgress(storyId, {
+        currentChapterId: localProgress.chapterId,
+        scrollPosition: localProgress.scrollPosition,
+      });
+    },
+    onSuccess: (_, storyId) => {
+      clearPendingSync(storyId);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.library.readingProgress(storyId),
+      });
+    },
+  });
+  
+  // Sync when coming online
+  useEffect(() => {
+    if (isOnline && pendingSync.length > 0) {
+      pendingSync.forEach((storyId) => {
+        syncMutation.mutate(storyId);
+      });
+    }
+  }, [isOnline, pendingSync]);
+  
+  return { isSyncing: syncMutation.isPending };
+}
+```
+
+---
+
+## 12. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-04 | Frontend Architecture Team | Initial release |
+| 2.0 | 2026-01-05 | Frontend Architecture Team | Added extended query keys aligned with Backend API, WebSocket store, notification store, reading progress store, chapter editor store |
 
 ---
 
-## 10. Related Documents
+## 13. Related Documents
 
 - [02_FRONTEND_ARCHITECTURE.md](./02_FRONTEND_ARCHITECTURE.md) - Architecture overview
 - [06_API_INTEGRATION.md](./06_API_INTEGRATION.md) - API integration patterns
 - [09_PERFORMANCE_OPTIMIZATION.md](./09_PERFORMANCE_OPTIMIZATION.md) - Performance guidelines
+- [Backend 06_REALTIME_AND_EVENTS.md](../../Backend/N9/Documentation/Specification/06_REALTIME_AND_EVENTS.md) - Event System Design
+- [Backend 07_NOTIFICATIONS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) - Notifications Design
+- [Backend 05_READINGS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md) - Reading Progress Design

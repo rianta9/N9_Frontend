@@ -4,28 +4,31 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Backend Reference | [BackendDesign/Components](../../../../Backend/N9/Documentation/BackendDesign/Components/) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document defines the **frontend architecture** for the N9 platform, covering system structure, technology choices, code organization, and integration patterns with backend services.
+This document defines the **frontend architecture** for the N9 platform, covering system structure, technology choices, code organization, security patterns, performance optimization, and integration patterns with backend services. Aligned with 13 backend components for comprehensive API coverage.
 
 ### 2.2 Architecture Goals
 
-| Goal | Description |
-|------|-------------|
-| **Performance** | Sub-2s initial load, instant navigation |
-| **Scalability** | Support 100K+ concurrent users |
-| **Maintainability** | Clear boundaries, testable code |
-| **Accessibility** | WCAG 2.1 AA compliance |
-| **Developer Experience** | Fast builds, hot reload, type safety |
+| Goal | Description | Metrics |
+|------|-------------|----------|
+| **Performance** | Sub-2s initial load, instant navigation | FCP <1.5s, LCP <2.5s, TTI <3.5s |
+| **Scalability** | Support 100K+ concurrent users | Horizontal scaling, CDN |
+| **Maintainability** | Clear boundaries, testable code | >80% code coverage |
+| **Accessibility** | WCAG 2.1 AA compliance | axe-core score 100 |
+| **Security** | Zero-trust, XSS/CSRF protection | OWASP Top 10 compliance |
+| **Developer Experience** | Fast builds, hot reload, type safety | <5s HMR, 100% type coverage |
+| **Reliability** | 99.9% uptime, graceful degradation | Error rate <0.1% |
 
 ### 2.3 Platform Targets
 
@@ -1073,19 +1076,296 @@ export * from '@testing-library/react';
 
 ---
 
-## 12. References
+## 12. Security Architecture
 
-### 12.1 Related Documents
+### 12.1 Authentication & Authorization
+
+```typescript
+// Security layers
+const securityConfig = {
+  // Token management
+  tokenStorage: 'memory', // Never localStorage for access tokens
+  refreshStorage: 'httpOnly cookie',
+  tokenRotation: true,
+  
+  // Session security
+  sessionTimeout: 30 * 60 * 1000, // 30 minutes
+  inactivityLogout: true,
+  
+  // API security
+  csrfProtection: true,
+  rateLimiting: {
+    enabled: true,
+    maxRequests: 100,
+    windowMs: 60 * 1000,
+  },
+};
+
+// Route protection
+const routeGuards = {
+  public: [], // No auth required
+  guest: ['GuestGuard'], // Redirect if authenticated
+  auth: ['AuthGuard'], // Require authentication
+  admin: ['AuthGuard', 'RoleGuard:admin'],
+  author: ['AuthGuard', 'RoleGuard:author'],
+};
+```
+
+### 12.2 XSS Prevention
+
+```typescript
+// Content sanitization
+import DOMPurify from 'dompurify';
+
+export function sanitizeHtml(dirty: string): string {
+  return DOMPurify.sanitize(dirty, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
+    ALLOWED_ATTR: [],
+  });
+}
+
+// React safe rendering - avoid dangerouslySetInnerHTML
+// Use proper sanitization when needed
+<div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+```
+
+### 12.3 Sensitive Data Handling
+
+```typescript
+// Never log sensitive data
+const sensitiveFields = ['password', 'token', 'creditCard', 'ssn'];
+
+export function redactSensitiveData<T extends object>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      sensitiveFields.some(f => key.toLowerCase().includes(f))
+        ? '[REDACTED]'
+        : value
+    ])
+  ) as T;
+}
+```
+
+---
+
+## 13. Performance Optimization
+
+### 13.1 Bundle Optimization
+
+```typescript
+// vite.config.ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          query: ['@tanstack/react-query'],
+          editor: ['@tiptap/react', '@tiptap/starter-kit'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500,
+  },
+});
+
+// Route-based code splitting
+const StoryEditorPage = lazy(() => import('./pages/author/StoryEditorPage'));
+const AdminDashboard = lazy(() => import('./pages/admin/DashboardPage'));
+```
+
+### 13.2 Image Optimization
+
+```typescript
+// Responsive images with lazy loading
+function OptimizedImage({ src, alt, ...props }) {
+  return (
+    <picture>
+      <source srcSet={`${src}?w=400 400w, ${src}?w=800 800w`} />
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        {...props}
+      />
+    </picture>
+  );
+}
+
+// Cover image sizes
+const coverSizes = {
+  thumbnail: { width: 80, height: 120 },
+  card: { width: 200, height: 300 },
+  detail: { width: 350, height: 500 },
+};
+```
+
+### 13.3 Caching Strategy
+
+```typescript
+// TanStack Query caching
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error) => {
+        if (error?.status === 404) return false;
+        return failureCount < 3;
+      },
+    },
+  },
+});
+
+// Prefetch strategies
+function usePrefetchStory(storyId: string) {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: storyKeys.detail(storyId),
+      queryFn: () => fetchStory(storyId),
+    });
+  }, [storyId]);
+}
+```
+
+---
+
+## 14. CI/CD & Deployment
+
+### 14.1 GitHub Actions Pipeline
+
+```yaml
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm test:coverage
+      - run: pnpm build
+      
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps
+      - run: pnpm test:e2e
+
+  deploy-preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, e2e-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - run: pnpm build
+      # Deploy to preview environment
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, e2e-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - run: pnpm build
+      # Deploy to production
+```
+
+### 14.2 Environment Configuration
+
+```typescript
+// config/env.ts
+const envSchema = z.object({
+  VITE_API_URL: z.string().url(),
+  VITE_WS_URL: z.string().url(),
+  VITE_CDN_URL: z.string().url(),
+  VITE_SENTRY_DSN: z.string().optional(),
+  VITE_MIXPANEL_TOKEN: z.string().optional(),
+  VITE_ENABLE_MSW: z.coerce.boolean().default(false),
+});
+
+export const env = envSchema.parse(import.meta.env);
+
+// Environment-specific configs
+const configs = {
+  development: {
+    apiUrl: 'http://localhost:8080/api/v1',
+    wsUrl: 'ws://localhost:8080/ws',
+    debug: true,
+  },
+  staging: {
+    apiUrl: 'https://api-staging.n9.com/v1',
+    wsUrl: 'wss://ws-staging.n9.com',
+    debug: true,
+  },
+  production: {
+    apiUrl: 'https://api.n9.com/v1',
+    wsUrl: 'wss://ws.n9.com',
+    debug: false,
+  },
+};
+```
+
+---
+
+## 15. References
+
+### 15.1 Related Design Documents
 
 | Document | Purpose |
 |----------|---------|
 | [00_FRONTEND_DOCUMENTATION_STANDARDS.md](00_FRONTEND_DOCUMENTATION_STANDARDS.md) | Documentation guidelines |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](02_DESIGN_SYSTEM_GUIDELINES.md) | UI/UX standards |
 | [03_STATE_MANAGEMENT_ROUTING.md](03_STATE_MANAGEMENT_ROUTING.md) | State patterns |
+| [04_SHARED_COMPONENTS.md](04_SHARED_COMPONENTS.md) | Component library |
+| [05_MOBILE_RESPONSIVE_DESIGN.md](05_MOBILE_RESPONSIVE_DESIGN.md) | Mobile patterns |
 
-### 12.2 Backend References
+### 15.2 Backend Component References
 
 | Document | Purpose |
 |----------|---------|
-| [08_API_STANDARDS.md](../Specification/08_API_STANDARDS.md) | API conventions |
-| [13_API_CATALOG.md](../Specification/13_API_CATALOG.md) | Endpoint reference |
+| [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md) | Stories API |
+| [02_USERS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/02_USERS_COMPONENT.md) | Users API |
+| [03_PAYMENTS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/03_PAYMENTS_COMPONENT.md) | Payments API |
+| [04_INTERACTIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) | Interactions API |
+| [05_READINGS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md) | Reading Progress API |
+| [06_SEARCH_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/06_SEARCH_COMPONENT.md) | Search API |
+| [07_NOTIFICATIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) | Notifications API |
+
+---
+
+## 16. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial architecture document |
+| 2.0 | 2026-01-04 | Frontend Team | Added security architecture, performance optimization, CI/CD pipeline, enhanced goals with metrics, comprehensive backend component references |

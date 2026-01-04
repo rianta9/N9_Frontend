@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Backend Reference | [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md), [06_SEARCH_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/06_SEARCH_COMPONENT.md), [08_RECOMMENDATION_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/08_RECOMMENDATION_COMPONENT.md) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **home and discovery pages** for the N9 platform, including the landing page, home feed, browse/explore, and search functionality.
+This document specifies the **home and discovery pages** for the N9 platform, including the landing page, home feed, browse/explore, search functionality, and rankings. Aligned with backend Stories, Search, and Recommendation components.
 
 ### 2.2 User Flows
 
@@ -43,16 +44,38 @@ This document specifies the **home and discovery pages** for the N9 platform, in
 
 ### 2.3 Related Backend APIs
 
+#### Stories Endpoints
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/stories/feed` | GET | Personalized home feed |
-| `/stories/recommendations` | GET | AI-powered recommendations |
-| `/stories/browse` | GET | Browse with filters |
-| `/stories/search` | GET | Full-text search |
-| `/stories/trending` | GET | Trending stories |
-| `/stories/new-releases` | GET | Latest releases |
-| `/genres` | GET | Genre list |
-| `/tags/popular` | GET | Popular tags |
+|----------|--------|----------|
+| `/api/v1/stories` | GET | Browse stories with filters |
+| `/api/v1/stories/featured` | GET | Featured stories |
+| `/api/v1/stories/trending` | GET | Trending stories |
+| `/api/v1/stories/new-releases` | GET | Latest releases |
+| `/api/v1/stories/completed` | GET | Completed stories |
+
+#### Search Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/search` | GET | Full-text search |
+| `/api/v1/search/stories` | GET | Search stories only |
+| `/api/v1/search/authors` | GET | Search authors |
+| `/api/v1/search/suggestions` | GET | Search autocomplete |
+
+#### Recommendation Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/recommendations/feed` | GET | Personalized home feed |
+| `/api/v1/recommendations/for-you` | GET | AI-powered recommendations |
+| `/api/v1/recommendations/because-you-read` | GET | Based on reading history |
+| `/api/v1/recommendations/similar` | GET | Similar to story |
+
+#### Discovery Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/genres` | GET | Genre list with counts |
+| `/api/v1/tags/popular` | GET | Popular tags |
+| `/api/v1/rankings` | GET | Story rankings |
+| `/api/v1/rankings/{period}` | GET | Rankings by period |
 
 ---
 
@@ -775,19 +798,53 @@ interface StoryCardProps {
 
 ---
 
-## 11. References
+## 11. SEO & Analytics
 
-### 11.1 Related Documents
+### 11.1 SEO Configuration
+
+| Page | Title Pattern | Indexing |
+|------|--------------|----------|
+| Landing | `N9 - Discover Your Next Great Story` | Yes |
+| Browse | `{Genre} Stories - N9` | Yes |
+| Search | `Search Results for "{query}" - N9` | No |
+| Rankings | `{Period} Top Stories - N9` | Yes |
+| Home (auth) | `Home - N9` | No |
+
+### 11.2 Analytics Events
+
+| Event | Properties | Trigger |
+|-------|------------|----------|
+| `page_view` | page_name, referrer | Page load |
+| `story_click` | story_id, position, source | Click story card |
+| `search` | query, results_count | Search submit |
+| `filter_apply` | filter_type, value | Apply filter |
+| `genre_select` | genre | Click genre |
+
+---
+
+## 12. References
+
+### 12.1 Related Design Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [01_FRONTEND_ARCHITECTURE.md](../01_FRONTEND_ARCHITECTURE.md) | Project structure |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
 | [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | Data fetching |
 
-### 11.2 Backend APIs
+### 12.2 Backend Component References
 
 | Document | Purpose |
-|----------|---------|
-| [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Story endpoints |
-| [04_FUNCTIONAL_REQUIREMENTS.md](../../Specification/04_FUNCTIONAL_REQUIREMENTS.md) | Feature requirements |
+|----------|----------|
+| [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md) | Stories API |
+| [06_SEARCH_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/06_SEARCH_COMPONENT.md) | Search API |
+| [08_RECOMMENDATION_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/08_RECOMMENDATION_COMPONENT.md) | Recommendation API |
+
+---
+
+## 13. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial home and discovery pages |
+| 2.0 | 2026-01-04 | Frontend Team | Added comprehensive API endpoints (search, recommendations, rankings), SEO configuration, analytics events, backend component references |

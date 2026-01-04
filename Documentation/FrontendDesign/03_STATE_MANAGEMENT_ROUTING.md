@@ -4,11 +4,13 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-05 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+
+> **Specification Reference**: [04_STATE_MANAGEMENT.md](../FrontendSpecification/04_STATE_MANAGEMENT.md)
 
 ---
 
@@ -24,17 +26,20 @@ This document defines **state management patterns** and **routing architecture**
 │                    STATE MANAGEMENT LAYERS                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│   Server State (React Query)                                     │
-│   ├── Remote data from APIs                                      │
+│   Server State (TanStack Query)                                  │
+│   ├── Remote data from 142+ API endpoints                        │
 │   ├── Automatic caching & invalidation                           │
 │   ├── Background refetching                                      │
-│   └── Optimistic updates                                         │
+│   ├── Optimistic updates                                         │
+│   └── Offline support with persistence                           │
 │                                                                  │
 │   Client State (Zustand)                                         │
 │   ├── UI state (modals, sidebars)                               │
-│   ├── User preferences (theme, settings)                        │
+│   ├── User preferences (theme, reading settings)                │
 │   ├── Authentication state                                       │
-│   └── Notification queue                                         │
+│   ├── WebSocket connection management                            │
+│   ├── Notification queue & badge                                 │
+│   └── Chapter editor drafts                                      │
 │                                                                  │
 │   URL State (React Router)                                       │
 │   ├── Page navigation                                            │
@@ -85,12 +90,16 @@ export const queryClient = new QueryClient({
 });
 ```
 
-### 3.2 Query Key Factory Pattern
+### 3.2 Query Key Factory Pattern (Extended)
+
+> **Backend Reference**: [13_API_CATALOG.md](../BackendSpecification/13_API_CATALOG.md) - 142+ endpoints across 9 domains
 
 ```typescript
 // lib/query/keys.ts
 
-// Stories
+// ============================================
+// STORIES DOMAIN
+// ============================================
 export const storyKeys = {
   all: ['stories'] as const,
   lists: () => [...storyKeys.all, 'list'] as const,
@@ -99,37 +108,161 @@ export const storyKeys = {
   detail: (id: string) => [...storyKeys.details(), id] as const,
   chapters: (storyId: string) => [...storyKeys.detail(storyId), 'chapters'] as const,
   reviews: (storyId: string) => [...storyKeys.detail(storyId), 'reviews'] as const,
+  recommendations: (storyId: string) => [...storyKeys.detail(storyId), 'recommendations'] as const,
 };
 
-// Users
-export const userKeys = {
-  all: ['users'] as const,
-  current: () => [...userKeys.all, 'current'] as const,
-  profile: (id: string) => [...userKeys.all, 'profile', id] as const,
-  followers: (id: string) => [...userKeys.profile(id), 'followers'] as const,
-  following: (id: string) => [...userKeys.profile(id), 'following'] as const,
-};
-
-// Chapters
+// ============================================
+// CHAPTERS DOMAIN
+// ============================================
 export const chapterKeys = {
   all: ['chapters'] as const,
   detail: (id: string) => [...chapterKeys.all, id] as const,
   content: (id: string) => [...chapterKeys.detail(id), 'content'] as const,
-  comments: (id: string) => [...chapterKeys.detail(id), 'comments'] as const,
+  comments: (chapterId: string, filters?: CommentFilters) => 
+    [...chapterKeys.detail(chapterId), 'comments', filters] as const,
+  bookmarks: (chapterId: string) => [...chapterKeys.detail(chapterId), 'bookmarks'] as const,
 };
 
-// Notifications
+// ============================================
+// USERS DOMAIN
+// ============================================
+export const userKeys = {
+  all: ['users'] as const,
+  current: () => [...userKeys.all, 'current'] as const,
+  preferences: () => [...userKeys.current(), 'preferences'] as const,
+  profile: (username: string) => [...userKeys.all, 'profile', username] as const,
+  followers: (userId: string) => [...userKeys.profile(userId), 'followers'] as const,
+  following: (userId: string) => [...userKeys.profile(userId), 'following'] as const,
+  stories: (userId: string) => [...userKeys.profile(userId), 'stories'] as const,
+  readingLists: (userId: string) => [...userKeys.profile(userId), 'reading-lists'] as const,
+};
+
+// ============================================
+// LIBRARY DOMAIN (Reading Progress)
+// ============================================
+export const libraryKeys = {
+  all: ['library'] as const,
+  continueReading: () => [...libraryKeys.all, 'continue'] as const,
+  history: (filters?: HistoryFilters) => [...libraryKeys.all, 'history', filters] as const,
+  bookmarks: () => [...libraryKeys.all, 'bookmarks'] as const,
+  progress: (storyId: string) => [...libraryKeys.all, 'progress', storyId] as const,
+};
+
+// ============================================
+// INTERACTIONS DOMAIN
+// ============================================
+export const interactionKeys = {
+  all: ['interactions'] as const,
+  follows: {
+    story: (storyId: string) => [...interactionKeys.all, 'follows', 'story', storyId] as const,
+    author: (authorId: string) => [...interactionKeys.all, 'follows', 'author', authorId] as const,
+    check: (targetType: string, targetId: string) => 
+      [...interactionKeys.all, 'follows', 'check', targetType, targetId] as const,
+  },
+  likes: {
+    story: (storyId: string) => [...interactionKeys.all, 'likes', 'story', storyId] as const,
+    chapter: (chapterId: string) => [...interactionKeys.all, 'likes', 'chapter', chapterId] as const,
+    comment: (commentId: string) => [...interactionKeys.all, 'likes', 'comment', commentId] as const,
+  },
+  reviews: {
+    list: (storyId: string, filters?: ReviewFilters) => 
+      [...interactionKeys.all, 'reviews', storyId, filters] as const,
+    detail: (reviewId: string) => [...interactionKeys.all, 'reviews', 'detail', reviewId] as const,
+    userReview: (storyId: string) => [...interactionKeys.all, 'reviews', 'user', storyId] as const,
+  },
+  readingLists: {
+    all: () => [...interactionKeys.all, 'reading-lists'] as const,
+    list: (filters?: ListFilters) => [...interactionKeys.all, 'reading-lists', 'list', filters] as const,
+    detail: (listId: string) => [...interactionKeys.all, 'reading-lists', listId] as const,
+    items: (listId: string) => [...interactionKeys.all, 'reading-lists', listId, 'items'] as const,
+  },
+};
+
+// ============================================
+// PAYMENTS DOMAIN
+// ============================================
+export const paymentKeys = {
+  all: ['payments'] as const,
+  wallet: () => [...paymentKeys.all, 'wallet'] as const,
+  balance: () => [...paymentKeys.wallet(), 'balance'] as const,
+  transactions: (filters?: TransactionFilters) => 
+    [...paymentKeys.wallet(), 'transactions', filters] as const,
+  packages: () => [...paymentKeys.all, 'packages'] as const,
+  unlocks: {
+    chapter: (chapterId: string) => [...paymentKeys.all, 'unlocks', 'chapter', chapterId] as const,
+    story: (storyId: string) => [...paymentKeys.all, 'unlocks', 'story', storyId] as const,
+  },
+};
+
+// ============================================
+// NOTIFICATIONS DOMAIN
+// ============================================
 export const notificationKeys = {
   all: ['notifications'] as const,
-  list: (filters?: NotificationFilters) => [...notificationKeys.all, filters] as const,
+  list: (filters?: NotificationFilters) => [...notificationKeys.all, 'list', filters] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  preferences: () => [...notificationKeys.all, 'preferences'] as const,
 };
 
-// Wallet
-export const walletKeys = {
-  all: ['wallet'] as const,
-  balance: () => [...walletKeys.all, 'balance'] as const,
-  transactions: (filters?: TransactionFilters) => [...walletKeys.all, 'transactions', filters] as const,
+// ============================================
+// AUTHOR DOMAIN
+// ============================================
+export const authorKeys = {
+  all: ['author'] as const,
+  dashboard: () => [...authorKeys.all, 'dashboard'] as const,
+  stories: (filters?: AuthorStoryFilters) => [...authorKeys.all, 'stories', filters] as const,
+  analytics: {
+    overview: (period?: string) => [...authorKeys.all, 'analytics', 'overview', period] as const,
+    story: (storyId: string, period?: string) => 
+      [...authorKeys.all, 'analytics', 'story', storyId, period] as const,
+  },
+  earnings: {
+    summary: (period?: string) => [...authorKeys.all, 'earnings', 'summary', period] as const,
+    history: (filters?: EarningsFilters) => [...authorKeys.all, 'earnings', 'history', filters] as const,
+    payouts: () => [...authorKeys.all, 'earnings', 'payouts'] as const,
+  },
+};
+
+// ============================================
+// SEARCH DOMAIN
+// ============================================
+export const searchKeys = {
+  all: ['search'] as const,
+  global: (query: string, filters?: SearchFilters) => 
+    [...searchKeys.all, 'global', query, filters] as const,
+  stories: (query: string, filters?: StorySearchFilters) => 
+    [...searchKeys.all, 'stories', query, filters] as const,
+  authors: (query: string) => [...searchKeys.all, 'authors', query] as const,
+  suggestions: (query: string) => [...searchKeys.all, 'suggestions', query] as const,
+};
+
+// ============================================
+// ADMIN DOMAIN
+// ============================================
+export const adminKeys = {
+  all: ['admin'] as const,
+  dashboard: () => [...adminKeys.all, 'dashboard'] as const,
+  users: (filters?: AdminUserFilters) => [...adminKeys.all, 'users', filters] as const,
+  reports: (filters?: ReportFilters) => [...adminKeys.all, 'reports', filters] as const,
+  moderation: {
+    queue: (filters?: ModerationFilters) => [...adminKeys.all, 'moderation', 'queue', filters] as const,
+    history: (filters?: ModerationFilters) => [...adminKeys.all, 'moderation', 'history', filters] as const,
+  },
+  applications: (status?: string) => [...adminKeys.all, 'applications', status] as const,
+  payouts: (status?: string) => [...adminKeys.all, 'payouts', status] as const,
+  analytics: (period?: string) => [...adminKeys.all, 'analytics', period] as const,
+};
+
+// ============================================
+// READING PROGRESS DOMAIN
+// ============================================
+export const readingProgressKeys = {
+  all: ['reading-progress'] as const,
+  story: (storyId: string) => [...readingProgressKeys.all, 'story', storyId] as const,
+  chapter: (chapterId: string) => [...readingProgressKeys.all, 'chapter', chapterId] as const,
+  streak: () => [...readingProgressKeys.all, 'streak'] as const,
+  goals: () => [...readingProgressKeys.all, 'goals'] as const,
+  statistics: (period?: string) => [...readingProgressKeys.all, 'statistics', period] as const,
 };
 ```
 
@@ -276,9 +409,136 @@ export { useThemeStore } from './themeStore';
 export { useUIStore } from './uiStore';
 export { useReadingStore } from './readingStore';
 export { useNotificationStore } from './notificationStore';
+export { useWebSocketStore } from './webSocketStore';
+export { useReadingProgressStore } from './readingProgressStore';
+export { useChapterEditorStore } from './chapterEditorStore';
 ```
 
-### 4.2 Auth Store
+### 4.2 WebSocket Store
+
+> **Backend Reference**: [06_REALTIME_AND_EVENTS.md](../BackendSpecification/06_REALTIME_AND_EVENTS.md)
+
+```typescript
+// stores/webSocketStore.ts
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+interface WebSocketState {
+  socket: WebSocket | null;
+  status: ConnectionStatus;
+  subscribedChannels: Set<string>;
+  reconnectAttempts: number;
+  lastError: string | null;
+}
+
+interface WebSocketActions {
+  connect: (token: string) => void;
+  disconnect: () => void;
+  subscribe: (channel: string) => void;
+  unsubscribe: (channel: string) => void;
+  sendMessage: (type: string, payload: unknown) => void;
+  setStatus: (status: ConnectionStatus) => void;
+  incrementReconnect: () => void;
+  resetReconnect: () => void;
+}
+
+export const useWebSocketStore = create<WebSocketState & WebSocketActions>()(
+  subscribeWithSelector((set, get) => ({
+    // State
+    socket: null,
+    status: 'disconnected',
+    subscribedChannels: new Set(),
+    reconnectAttempts: 0,
+    lastError: null,
+
+    // Actions
+    connect: (token) => {
+      const currentSocket = get().socket;
+      if (currentSocket?.readyState === WebSocket.OPEN) return;
+
+      set({ status: 'connecting' });
+
+      const ws = new WebSocket(
+        `${import.meta.env.VITE_WS_URL}/v1/connect?token=${token}`
+      );
+
+      ws.onopen = () => {
+        set({ socket: ws, status: 'connected', lastError: null });
+        get().resetReconnect();
+        // Resubscribe to channels
+        get().subscribedChannels.forEach((channel) => {
+          ws.send(JSON.stringify({ type: 'SUBSCRIBE', channel }));
+        });
+      };
+
+      ws.onclose = () => {
+        set({ status: 'disconnected' });
+        // Auto-reconnect logic
+        const attempts = get().reconnectAttempts;
+        if (attempts < 5) {
+          setTimeout(() => {
+            get().incrementReconnect();
+            get().connect(token);
+          }, Math.min(1000 * Math.pow(2, attempts), 30000));
+        }
+      };
+
+      ws.onerror = (error) => {
+        set({ lastError: 'WebSocket connection error' });
+      };
+
+      set({ socket: ws });
+    },
+
+    disconnect: () => {
+      const { socket } = get();
+      socket?.close();
+      set({ socket: null, status: 'disconnected', subscribedChannels: new Set() });
+    },
+
+    subscribe: (channel) => {
+      const { socket, subscribedChannels } = get();
+      if (!subscribedChannels.has(channel)) {
+        subscribedChannels.add(channel);
+        set({ subscribedChannels: new Set(subscribedChannels) });
+        if (socket?.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'SUBSCRIBE', channel }));
+        }
+      }
+    },
+
+    unsubscribe: (channel) => {
+      const { socket, subscribedChannels } = get();
+      if (subscribedChannels.has(channel)) {
+        subscribedChannels.delete(channel);
+        set({ subscribedChannels: new Set(subscribedChannels) });
+        if (socket?.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'UNSUBSCRIBE', channel }));
+        }
+      }
+    },
+
+    sendMessage: (type, payload) => {
+      const { socket } = get();
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type, payload }));
+      }
+    },
+
+    setStatus: (status) => set({ status }),
+    incrementReconnect: () => set((s) => ({ reconnectAttempts: s.reconnectAttempts + 1 })),
+    resetReconnect: () => set({ reconnectAttempts: 0 }),
+  }))
+);
+
+// Selectors
+export const selectIsConnected = (state: WebSocketState) => state.status === 'connected';
+export const selectConnectionStatus = (state: WebSocketState) => state.status;
+```
+
+### 4.3 Auth Store
 
 ```typescript
 // stores/authStore.ts
@@ -516,7 +776,7 @@ export const useReadingStore = create<ReadingState & ReadingActions>()(
 );
 ```
 
-### 4.5 UI Store
+### 4.6 UI Store
 
 ```typescript
 // stores/uiStore.ts
@@ -547,6 +807,460 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   openModal: (modalId, data = {}) => set({ activeModal: modalId, modalData: data }),
   closeModal: () => set({ activeModal: null, modalData: {} }),
 }));
+```
+
+### 4.7 Notification Store (Extended)
+
+> **Backend Reference**: [07_NOTIFICATIONS_COMPONENT.md](../BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md)
+
+```typescript
+// stores/notificationStore.ts
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+
+interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
+type NotificationType = 
+  | 'NEW_CHAPTER'
+  | 'STORY_UPDATE'
+  | 'COMMENT_REPLY'
+  | 'COMMENT_MENTION'
+  | 'NEW_FOLLOWER'
+  | 'STORY_LIKE'
+  | 'REVIEW_RECEIVED'
+  | 'DONATION_RECEIVED'
+  | 'MILESTONE_REACHED'
+  | 'SYSTEM_ALERT'
+  | 'PAYOUT_PROCESSED';
+
+interface NotificationState {
+  notifications: Notification[];
+  unreadCount: number;
+  hasNewNotifications: boolean;
+  lastFetchedAt: string | null;
+}
+
+interface NotificationActions {
+  setNotifications: (notifications: Notification[]) => void;
+  addNotification: (notification: Notification) => void;
+  markAsRead: (notificationId: string) => void;
+  markAllAsRead: () => void;
+  removeNotification: (notificationId: string) => void;
+  setUnreadCount: (count: number) => void;
+  incrementUnread: () => void;
+  decrementUnread: () => void;
+  clearHasNew: () => void;
+}
+
+export const useNotificationStore = create<NotificationState & NotificationActions>()(
+  immer((set) => ({
+    // State
+    notifications: [],
+    unreadCount: 0,
+    hasNewNotifications: false,
+    lastFetchedAt: null,
+
+    // Actions
+    setNotifications: (notifications) =>
+      set((state) => {
+        state.notifications = notifications;
+        state.unreadCount = notifications.filter((n) => !n.read).length;
+        state.lastFetchedAt = new Date().toISOString();
+      }),
+
+    addNotification: (notification) =>
+      set((state) => {
+        state.notifications.unshift(notification);
+        if (!notification.read) {
+          state.unreadCount += 1;
+          state.hasNewNotifications = true;
+        }
+      }),
+
+    markAsRead: (notificationId) =>
+      set((state) => {
+        const notification = state.notifications.find((n) => n.id === notificationId);
+        if (notification && !notification.read) {
+          notification.read = true;
+          state.unreadCount = Math.max(0, state.unreadCount - 1);
+        }
+      }),
+
+    markAllAsRead: () =>
+      set((state) => {
+        state.notifications.forEach((n) => {
+          n.read = true;
+        });
+        state.unreadCount = 0;
+      }),
+
+    removeNotification: (notificationId) =>
+      set((state) => {
+        const index = state.notifications.findIndex((n) => n.id === notificationId);
+        if (index !== -1) {
+          const notification = state.notifications[index];
+          if (!notification.read) {
+            state.unreadCount = Math.max(0, state.unreadCount - 1);
+          }
+          state.notifications.splice(index, 1);
+        }
+      }),
+
+    setUnreadCount: (count) => set((state) => { state.unreadCount = count; }),
+    incrementUnread: () => set((state) => { state.unreadCount += 1; }),
+    decrementUnread: () => set((state) => { state.unreadCount = Math.max(0, state.unreadCount - 1); }),
+    clearHasNew: () => set((state) => { state.hasNewNotifications = false; }),
+  }))
+);
+
+// Selectors
+export const selectUnreadCount = (state: NotificationState) => state.unreadCount;
+export const selectHasNewNotifications = (state: NotificationState) => state.hasNewNotifications;
+```
+
+### 4.8 Reading Progress Store
+
+> **Backend Reference**: [05_READINGS_COMPONENT.md](../BackendDesign/Components/05_READINGS_COMPONENT.md)
+
+```typescript
+// stores/readingProgressStore.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface ReadingProgressEntry {
+  storyId: string;
+  chapterId: string;
+  chapterNumber: number;
+  scrollPosition: number;
+  progressPercent: number;
+  lastReadAt: string;
+}
+
+interface PendingSync {
+  storyId: string;
+  chapterId: string;
+  scrollPosition: number;
+  timestamp: string;
+}
+
+interface ReadingStreakData {
+  currentStreak: number;
+  longestStreak: number;
+  todayMinutes: number;
+  weeklyMinutes: number;
+  lastReadDate: string | null;
+}
+
+interface ReadingProgressState {
+  // Current session
+  currentProgress: ReadingProgressEntry | null;
+  
+  // Local cache for continue reading
+  recentProgress: Map<string, ReadingProgressEntry>; // storyId -> progress
+  
+  // Offline support
+  pendingSyncs: PendingSync[];
+  isOnline: boolean;
+  
+  // Streak data (cached)
+  streakData: ReadingStreakData | null;
+  
+  // Reading session tracking
+  sessionStartTime: number | null;
+  sessionMinutes: number;
+}
+
+interface ReadingProgressActions {
+  // Progress tracking
+  updateProgress: (progress: Partial<ReadingProgressEntry> & { storyId: string }) => void;
+  setCurrentProgress: (progress: ReadingProgressEntry) => void;
+  clearCurrentProgress: () => void;
+  
+  // Sync management
+  addPendingSync: (sync: PendingSync) => void;
+  removePendingSync: (storyId: string, chapterId: string) => void;
+  clearPendingSyncs: () => void;
+  setOnlineStatus: (isOnline: boolean) => void;
+  
+  // Streak tracking
+  setStreakData: (data: ReadingStreakData) => void;
+  
+  // Session tracking
+  startReadingSession: () => void;
+  endReadingSession: () => void;
+  updateSessionTime: (minutes: number) => void;
+}
+
+export const useReadingProgressStore = create<ReadingProgressState & ReadingProgressActions>()(
+  persist(
+    immer((set, get) => ({
+      // State
+      currentProgress: null,
+      recentProgress: new Map(),
+      pendingSyncs: [],
+      isOnline: navigator.onLine,
+      streakData: null,
+      sessionStartTime: null,
+      sessionMinutes: 0,
+
+      // Actions
+      updateProgress: (progress) =>
+        set((state) => {
+          const existing = state.recentProgress.get(progress.storyId);
+          const updated = {
+            ...existing,
+            ...progress,
+            lastReadAt: new Date().toISOString(),
+          } as ReadingProgressEntry;
+          
+          state.recentProgress.set(progress.storyId, updated);
+          state.currentProgress = updated;
+          
+          // Queue for sync if offline
+          if (!state.isOnline && progress.chapterId && progress.scrollPosition !== undefined) {
+            state.pendingSyncs.push({
+              storyId: progress.storyId,
+              chapterId: progress.chapterId,
+              scrollPosition: progress.scrollPosition,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }),
+
+      setCurrentProgress: (progress) =>
+        set((state) => {
+          state.currentProgress = progress;
+          state.recentProgress.set(progress.storyId, progress);
+        }),
+
+      clearCurrentProgress: () =>
+        set((state) => {
+          state.currentProgress = null;
+        }),
+
+      addPendingSync: (sync) =>
+        set((state) => {
+          state.pendingSyncs.push(sync);
+        }),
+
+      removePendingSync: (storyId, chapterId) =>
+        set((state) => {
+          state.pendingSyncs = state.pendingSyncs.filter(
+            (s) => !(s.storyId === storyId && s.chapterId === chapterId)
+          );
+        }),
+
+      clearPendingSyncs: () =>
+        set((state) => {
+          state.pendingSyncs = [];
+        }),
+
+      setOnlineStatus: (isOnline) =>
+        set((state) => {
+          state.isOnline = isOnline;
+        }),
+
+      setStreakData: (data) =>
+        set((state) => {
+          state.streakData = data;
+        }),
+
+      startReadingSession: () =>
+        set((state) => {
+          state.sessionStartTime = Date.now();
+        }),
+
+      endReadingSession: () =>
+        set((state) => {
+          if (state.sessionStartTime) {
+            const minutes = Math.round((Date.now() - state.sessionStartTime) / 60000);
+            state.sessionMinutes += minutes;
+            state.sessionStartTime = null;
+          }
+        }),
+
+      updateSessionTime: (minutes) =>
+        set((state) => {
+          state.sessionMinutes = minutes;
+        }),
+    })),
+    {
+      name: 'n9-reading-progress',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        recentProgress: Array.from(state.recentProgress.entries()),
+        pendingSyncs: state.pendingSyncs,
+        streakData: state.streakData,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        recentProgress: new Map(persistedState?.recentProgress || []),
+      }),
+    }
+  )
+);
+
+// Selectors
+export const selectCurrentProgress = (state: ReadingProgressState) => state.currentProgress;
+export const selectPendingSyncs = (state: ReadingProgressState) => state.pendingSyncs;
+export const selectStreakData = (state: ReadingProgressState) => state.streakData;
+```
+
+### 4.9 Chapter Editor Store
+
+```typescript
+// stores/chapterEditorStore.ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+interface ChapterDraft {
+  storyId: string;
+  chapterId?: string; // undefined for new chapters
+  title: string;
+  content: string;
+  authorNotes?: string;
+  isPremium: boolean;
+  coinPrice?: number;
+  scheduledAt?: string;
+  lastSavedAt: string;
+  wordCount: number;
+}
+
+interface ChapterEditorState {
+  drafts: Map<string, ChapterDraft>; // key: `${storyId}-${chapterId || 'new'}`
+  currentDraftKey: string | null;
+  autoSaveEnabled: boolean;
+  lastAutoSaveAt: string | null;
+  hasUnsavedChanges: boolean;
+}
+
+interface ChapterEditorActions {
+  // Draft management
+  setDraft: (draft: ChapterDraft) => void;
+  updateDraft: (key: string, updates: Partial<ChapterDraft>) => void;
+  deleteDraft: (key: string) => void;
+  clearAllDrafts: () => void;
+  
+  // Current draft
+  setCurrentDraft: (key: string | null) => void;
+  getCurrentDraft: () => ChapterDraft | undefined;
+  
+  // Auto-save
+  setAutoSave: (enabled: boolean) => void;
+  markAutoSaved: () => void;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+}
+
+const getDraftKey = (storyId: string, chapterId?: string) => 
+  `${storyId}-${chapterId || 'new'}`;
+
+export const useChapterEditorStore = create<ChapterEditorState & ChapterEditorActions>()(
+  persist(
+    immer((set, get) => ({
+      // State
+      drafts: new Map(),
+      currentDraftKey: null,
+      autoSaveEnabled: true,
+      lastAutoSaveAt: null,
+      hasUnsavedChanges: false,
+
+      // Actions
+      setDraft: (draft) =>
+        set((state) => {
+          const key = getDraftKey(draft.storyId, draft.chapterId);
+          state.drafts.set(key, {
+            ...draft,
+            lastSavedAt: new Date().toISOString(),
+            wordCount: draft.content.split(/\s+/).filter(Boolean).length,
+          });
+          state.currentDraftKey = key;
+          state.hasUnsavedChanges = false;
+        }),
+
+      updateDraft: (key, updates) =>
+        set((state) => {
+          const draft = state.drafts.get(key);
+          if (draft) {
+            Object.assign(draft, updates);
+            if (updates.content !== undefined) {
+              draft.wordCount = updates.content.split(/\s+/).filter(Boolean).length;
+            }
+            draft.lastSavedAt = new Date().toISOString();
+            state.hasUnsavedChanges = true;
+          }
+        }),
+
+      deleteDraft: (key) =>
+        set((state) => {
+          state.drafts.delete(key);
+          if (state.currentDraftKey === key) {
+            state.currentDraftKey = null;
+          }
+        }),
+
+      clearAllDrafts: () =>
+        set((state) => {
+          state.drafts.clear();
+          state.currentDraftKey = null;
+        }),
+
+      setCurrentDraft: (key) =>
+        set((state) => {
+          state.currentDraftKey = key;
+        }),
+
+      getCurrentDraft: () => {
+        const { drafts, currentDraftKey } = get();
+        return currentDraftKey ? drafts.get(currentDraftKey) : undefined;
+      },
+
+      setAutoSave: (enabled) =>
+        set((state) => {
+          state.autoSaveEnabled = enabled;
+        }),
+
+      markAutoSaved: () =>
+        set((state) => {
+          state.lastAutoSaveAt = new Date().toISOString();
+          state.hasUnsavedChanges = false;
+        }),
+
+      setHasUnsavedChanges: (hasChanges) =>
+        set((state) => {
+          state.hasUnsavedChanges = hasChanges;
+        }),
+    })),
+    {
+      name: 'n9-chapter-editor',
+      partialize: (state) => ({
+        drafts: Array.from(state.drafts.entries()),
+        autoSaveEnabled: state.autoSaveEnabled,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        drafts: new Map(persistedState?.drafts || []),
+      }),
+    }
+  )
+);
+
+// Selectors
+export const selectCurrentDraft = (state: ChapterEditorState) => 
+  state.currentDraftKey ? state.drafts.get(state.currentDraftKey) : undefined;
+export const selectHasUnsavedChanges = (state: ChapterEditorState) => state.hasUnsavedChanges;
+export const selectDraftCount = (state: ChapterEditorState) => state.drafts.size;
 ```
 
 ---
@@ -1145,10 +1859,31 @@ function StoryContent({ storyId }: { storyId: string }) {
 |----------|---------|
 | [01_FRONTEND_ARCHITECTURE.md](01_FRONTEND_ARCHITECTURE.md) | System architecture |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](02_DESIGN_SYSTEM_GUIDELINES.md) | UI/UX standards |
+| [04_STATE_MANAGEMENT.md](../FrontendSpecification/04_STATE_MANAGEMENT.md) | Frontend Specification |
+| [06_REALTIME_AND_EVENTS.md](../BackendSpecification/06_REALTIME_AND_EVENTS.md) | WebSocket events |
+| [13_API_CATALOG.md](../BackendSpecification/13_API_CATALOG.md) | API endpoints |
 
-### 9.2 External Resources
+### 9.2 Backend Component References
+
+| Component | Design Document |
+|-----------|-----------------|
+| Payments | [03_PAYMENTS_COMPONENT.md](../BackendDesign/Components/03_PAYMENTS_COMPONENT.md) |
+| Interactions | [04_INTERACTIONS_COMPONENT.md](../BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) |
+| Readings | [05_READINGS_COMPONENT.md](../BackendDesign/Components/05_READINGS_COMPONENT.md) |
+| Notifications | [07_NOTIFICATIONS_COMPONENT.md](../BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) |
+
+### 9.3 External Resources
 
 - [TanStack Query Documentation](https://tanstack.com/query/latest)
 - [Zustand Documentation](https://docs.pmnd.rs/zustand)
 - [React Router Documentation](https://reactrouter.com)
 - [React Hook Form Documentation](https://react-hook-form.com)
+
+---
+
+## 10. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Engineering Team | Initial release |
+| 2.0 | 2026-01-05 | Frontend Engineering Team | Extended query key factory with 9 domains (142+ endpoints). Added WebSocket Store, extended Notification Store, Reading Progress Store with offline support, Chapter Editor Store with auto-save. Aligned with Backend Design documents. |

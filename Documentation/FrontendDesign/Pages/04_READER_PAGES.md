@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Backend Reference | [05_READINGS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md), [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **reader pages** for the N9 platform, including the immersive chapter reader, reading settings, and library management.
+This document specifies the **reader pages** for the N9 platform, including the immersive chapter reader, reading settings, library management, and offline reading. Aligned with backend Readings and Stories components.
 
 ### 2.2 User Flows
 
@@ -44,15 +45,40 @@ This document specifies the **reader pages** for the N9 platform, including the 
 
 ### 2.3 Related Backend APIs
 
+#### Chapter Content Endpoints
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/chapters/:id` | GET | Chapter content |
-| `/chapters/:id/unlock` | POST | Unlock premium chapter |
-| `/reading-progress` | POST | Save reading position |
-| `/reading-progress/sync` | POST | Sync progress |
-| `/bookmarks` | GET/POST/DELETE | Manage bookmarks |
-| `/highlights` | GET/POST/DELETE | Manage highlights |
-| `/chapters/:id/comments` | GET/POST | Chapter comments |
+|----------|--------|----------|
+| `/api/v1/chapters/{id}` | GET | Chapter content |
+| `/api/v1/chapters/{id}/unlock` | POST | Unlock premium chapter |
+| `/api/v1/stories/{storyId}/chapters/batch` | GET | Batch download chapters |
+
+#### Reading Progress Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/reading-progress` | GET | Get all progress |
+| `/api/v1/reading-progress` | POST | Save reading position |
+| `/api/v1/reading-progress/sync` | POST | Sync progress across devices |
+| `/api/v1/reading-progress/story/{storyId}` | GET | Progress for story |
+| `/api/v1/reading-progress/history` | GET | Reading history |
+
+#### Bookmarks & Highlights Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/bookmarks` | GET | List bookmarks |
+| `/api/v1/bookmarks` | POST | Create bookmark |
+| `/api/v1/bookmarks/{id}` | DELETE | Delete bookmark |
+| `/api/v1/highlights` | GET | List highlights |
+| `/api/v1/highlights` | POST | Create highlight |
+| `/api/v1/highlights/{id}` | PUT | Update highlight note |
+| `/api/v1/highlights/{id}` | DELETE | Delete highlight |
+
+#### Library Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/library` | GET | User's library |
+| `/api/v1/library/collections` | GET | User's collections |
+| `/api/v1/library/collections` | POST | Create collection |
+| `/api/v1/library/collections/{id}` | PUT | Update collection |
 
 ---
 
@@ -889,16 +915,28 @@ async function downloadStoryForOffline(storyId: string) {
 
 ## 12. References
 
-### 12.1 Related Documents
+### 12.1 Related Design Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [03_STORY_PAGES.md](./03_STORY_PAGES.md) | Story detail |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
 | [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns |
+| [05_MOBILE_RESPONSIVE_DESIGN.md](../05_MOBILE_RESPONSIVE_DESIGN.md) | Mobile reading |
 
-### 12.2 Backend APIs
+### 12.2 Backend Component References
 
 | Document | Purpose |
-|----------|---------|
-| [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Chapter/reading endpoints |
+|----------|----------|
+| [05_READINGS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md) | Reading progress, bookmarks, highlights |
+| [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md) | Chapters, content delivery |
+| [03_PAYMENTS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/03_PAYMENTS_COMPONENT.md) | Premium chapter unlocking |
+
+---
+
+## 13. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial reader pages specification |
+| 2.0 | 2026-01-04 | Frontend Team | Added comprehensive API endpoints (reading progress, bookmarks, highlights, library), offline reading enhancements, backend component references |

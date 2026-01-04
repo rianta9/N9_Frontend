@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Design & Frontend Team |
 | Review Cycle | Quarterly |
+| Implementation | Tailwind CSS + shadcn/ui |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document defines the **design system** for the N9 platform, establishing visual language, component patterns, and UX guidelines to ensure a consistent, accessible, and delightful user experience across all platforms.
+This document defines the **design system** for the N9 platform, establishing visual language, component patterns, animation tokens, interaction patterns, and UX guidelines to ensure a consistent, accessible, and delightful user experience across all platforms.
 
 ### 2.2 Design Principles
 
@@ -820,18 +821,144 @@ function ThemeToggle() {
 
 ---
 
-## 13. References
+## 13. Animation & Motion
 
-### 13.1 Related Documents
+### 13.1 Animation Tokens
+
+```css
+:root {
+  /* Duration */
+  --duration-instant: 50ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  
+  /* Easing */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+```
+
+### 13.2 Animation Patterns
+
+| Pattern | Duration | Easing | Usage |
+|---------|----------|--------|-------|
+| Fade | 150ms | ease-out | Tooltips, toasts |
+| Slide | 250ms | ease-out | Drawers, modals |
+| Scale | 200ms | ease-bounce | Buttons, cards |
+| Collapse | 300ms | ease-in-out | Accordions |
+| Page transition | 300ms | ease-out | Route changes |
+
+### 13.3 Framer Motion Presets
+
+```typescript
+export const fadeIn = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.15 },
+};
+
+export const slideUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 20 },
+  transition: { duration: 0.25, ease: 'easeOut' },
+};
+
+export const scaleIn = {
+  initial: { opacity: 0, scale: 0.95 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.95 },
+  transition: { duration: 0.2, ease: [0.34, 1.56, 0.64, 1] },
+};
+```
+
+### 13.4 Reduced Motion Support
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+---
+
+## 14. Interaction Patterns
+
+### 14.1 Loading States
+
+| State | Component | Behavior |
+|-------|-----------|----------|
+| Initial load | Skeleton | Content-shaped placeholders |
+| Button loading | Spinner + disabled | Replace text with spinner |
+| Infinite scroll | Bottom loader | Show at 80% scroll |
+| Refresh | Pull-to-refresh | Mobile gesture |
+| Optimistic | Immediate UI | Revert on error |
+
+### 14.2 Empty States
+
+```tsx
+<EmptyState
+  icon={<BookOpen />}
+  title="No stories yet"
+  description="Start browsing to find your next great read"
+  action={<Button onClick={browse}>Browse Stories</Button>}
+/>
+```
+
+### 14.3 Error States
+
+| Error Type | Display | Recovery |
+|------------|---------|----------|
+| Network | Toast + retry | Retry button |
+| Validation | Inline field error | Auto-clear on fix |
+| Server (500) | Error page | Reload button |
+| Not Found | 404 page | Navigation links |
+| Unauthorized | Redirect | Login page |
+
+### 14.4 Success Feedback
+
+| Action | Feedback | Duration |
+|--------|----------|----------|
+| Save | Toast "Saved" | 3s auto-dismiss |
+| Delete | Toast + Undo | 5s with undo |
+| Create | Toast + Navigate | 3s |
+| Submit | Success modal | Until dismissed |
+
+---
+
+## 15. References
+
+### 15.1 Related Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [01_FRONTEND_ARCHITECTURE.md](01_FRONTEND_ARCHITECTURE.md) | Technical architecture |
 | [04_SHARED_COMPONENTS.md](04_SHARED_COMPONENTS.md) | Component specifications |
 | [05_MOBILE_RESPONSIVE_DESIGN.md](05_MOBILE_RESPONSIVE_DESIGN.md) | Mobile patterns |
 
-### 13.2 External Resources
+### 15.2 External Resources
 
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [shadcn/ui Components](https://ui.shadcn.com)
 - [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Framer Motion](https://www.framer.com/motion/)
+
+---
+
+## 16. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Design Team | Initial design system |
+| 2.0 | 2026-01-04 | Design Team | Added animation tokens, motion presets, interaction patterns, loading/empty/error states, reduced motion support |

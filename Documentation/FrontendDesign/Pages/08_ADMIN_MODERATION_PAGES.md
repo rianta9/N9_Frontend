@@ -4,18 +4,20 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-05 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Specification Reference | [12_PERMISSION_MATRIX.md](../../Specification/12_PERMISSION_MATRIX.md) |
+| Backend Reference | [10_MODERATION_ADMIN_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/10_MODERATION_ADMIN_COMPONENT.md) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **admin and moderation pages** for the N9 platform, including dashboard, user management, content moderation, and system configuration.
+This document specifies the **admin and moderation pages** for the N9 platform, including dashboard, user management, content moderation, payout administration, appeals handling, and system configuration. Aligned with backend moderation component for comprehensive platform governance.
 
 ### 2.2 Role-Based Access
 
@@ -50,14 +52,65 @@ This document specifies the **admin and moderation pages** for the N9 platform, 
 
 ### 2.3 Related Backend APIs
 
+#### User-Facing Reports
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/admin/dashboard` | GET | Dashboard stats |
-| `/admin/users` | GET/PUT/DELETE | User management |
-| `/admin/stories` | GET/PUT/DELETE | Story management |
-| `/admin/reports` | GET/PUT | Report handling |
-| `/admin/moderation/queue` | GET | Moderation queue |
-| `/admin/config` | GET/PUT | System config |
+| `/api/v1/reports` | POST | Create report |
+| `/api/v1/reports/reasons` | GET | List report reasons |
+| `/api/v1/reports/me` | GET | User's submitted reports |
+
+#### Moderator Queues
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/admin/reports` | GET | List report queue |
+| `/api/v1/admin/reports/{id}` | GET | Get report details |
+| `/api/v1/admin/reports/{id}/claim` | POST | Claim report |
+| `/api/v1/admin/reports/{id}/actions` | POST | Take action on report |
+| `/api/v1/admin/reports/{id}/escalate` | POST | Escalate report |
+| `/api/v1/admin/reports/{id}/duplicate` | POST | Mark as duplicate |
+| `/api/v1/admin/reports/stats` | GET | Queue statistics |
+
+#### Content Submissions
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/admin/submissions` | GET | List submissions |
+| `/api/v1/admin/submissions/{id}` | GET | Get submission details |
+| `/api/v1/admin/submissions/{id}/approve` | POST | Approve submission |
+| `/api/v1/admin/submissions/{id}/reject` | POST | Reject submission |
+| `/api/v1/admin/submissions/{id}/request-changes` | POST | Request revisions |
+
+#### User Enforcement
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/admin/users/{id}/history` | GET | User moderation history |
+| `/api/v1/admin/users/{id}/warn` | POST | Issue warning |
+| `/api/v1/admin/users/{id}/enforce` | POST | Apply enforcement |
+| `/api/v1/admin/users/{id}/lift` | POST | Lift enforcement |
+| `/api/v1/admin/enforcements` | GET | List active enforcements |
+
+#### Appeals
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/appeals` | POST | Submit appeal (user) |
+| `/api/v1/appeals/me` | GET | User's appeals |
+| `/api/v1/admin/appeals` | GET | List appeals queue |
+| `/api/v1/admin/appeals/{id}/review` | POST | Review appeal |
+
+#### Payout Administration
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/admin/payouts` | GET | List pending payouts |
+| `/api/v1/admin/payouts/{id}/approve` | POST | Approve payout |
+| `/api/v1/admin/payouts/{id}/reject` | POST | Reject payout |
+| `/api/v1/admin/payouts/{id}/hold` | POST | Hold for review |
+
+#### System Administration
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/admin/audit-log` | GET | Query audit log |
+| `/api/v1/admin/guidelines` | GET/POST | Manage guidelines |
+| `/api/v1/admin/guidelines/{id}` | PUT | Update guideline |
+| `/api/v1/admin/automod/rules` | GET/POST | Auto-mod rules |
 
 ---
 
@@ -72,9 +125,20 @@ const adminRoutes = [
   { path: '/admin/stories', element: <StoryManagement />, roles: ['admin', 'moderator'] },
   { path: '/admin/stories/:id', element: <StoryDetail />, roles: ['admin', 'moderator'] },
   { path: '/admin/reports', element: <ReportsQueue />, roles: ['admin', 'moderator'] },
+  { path: '/admin/reports/:id', element: <ReportDetail />, roles: ['admin', 'moderator'] },
   { path: '/admin/moderation', element: <ModerationQueue />, roles: ['moderator'] },
+  { path: '/admin/submissions', element: <ContentSubmissions />, roles: ['admin', 'moderator'] },
+  { path: '/admin/submissions/:id', element: <SubmissionReview />, roles: ['admin', 'moderator'] },
+  { path: '/admin/appeals', element: <AppealsQueue />, roles: ['admin'] },
+  { path: '/admin/appeals/:id', element: <AppealReview />, roles: ['admin'] },
+  { path: '/admin/payouts', element: <PayoutQueue />, roles: ['super_admin'] },
+  { path: '/admin/payouts/:id', element: <PayoutReview />, roles: ['super_admin'] },
+  { path: '/admin/author-applications', element: <AuthorApplications />, roles: ['admin'] },
+  { path: '/admin/author-applications/:id', element: <ApplicationReview />, roles: ['admin'] },
   { path: '/admin/analytics', element: <AnalyticsDashboard />, roles: ['admin'] },
+  { path: '/admin/audit-log', element: <AuditLogViewer />, roles: ['super_admin'] },
   { path: '/admin/settings', element: <SystemSettings />, roles: ['super_admin'] },
+  { path: '/admin/automod', element: <AutoModRules />, roles: ['super_admin'] },
 ];
 ```
 
@@ -798,11 +862,50 @@ const { data: queue } = useQuery({
   queryFn: () => api.admin.getModerationQueue(filters),
 });
 
+// Reports queue
+const { data: reports } = useQuery({
+  queryKey: ['admin', 'reports', filters],
+  queryFn: () => api.admin.getReports(filters),
+});
+
 // User management
 const usersQuery = useInfiniteQuery({
   queryKey: ['admin', 'users', filters],
   queryFn: ({ pageParam = 0 }) =>
     api.admin.getUsers({ offset: pageParam, ...filters }),
+  getNextPageParam: (lastPage) =>
+    lastPage.hasMore ? lastPage.nextOffset : undefined,
+});
+
+// Content submissions
+const { data: submissions } = useQuery({
+  queryKey: ['admin', 'submissions', filters],
+  queryFn: () => api.admin.getSubmissions(filters),
+});
+
+// Appeals queue
+const { data: appeals } = useQuery({
+  queryKey: ['admin', 'appeals', filters],
+  queryFn: () => api.admin.getAppeals(filters),
+});
+
+// Payout queue (super admin)
+const { data: payouts } = useQuery({
+  queryKey: ['admin', 'payouts', filters],
+  queryFn: () => api.admin.getPendingPayouts(filters),
+});
+
+// Author applications
+const { data: applications } = useQuery({
+  queryKey: ['admin', 'author-applications', filters],
+  queryFn: () => api.admin.getAuthorApplications(filters),
+});
+
+// Audit log
+const { data: auditLog } = useInfiniteQuery({
+  queryKey: ['admin', 'audit-log', filters],
+  queryFn: ({ pageParam = 0 }) =>
+    api.admin.getAuditLog({ offset: pageParam, ...filters }),
   getNextPageParam: (lastPage) =>
     lastPage.hasMore ? lastPage.nextOffset : undefined,
 });
@@ -827,6 +930,46 @@ const moderateContentMutation = useMutation({
   onSuccess: () => {
     queryClient.invalidateQueries(['admin', 'moderation']);
     toast.success('Content moderated');
+  },
+});
+
+// Appeals
+const reviewAppealMutation = useMutation({
+  mutationFn: (data: { appealId: string; outcome: string; note: string }) =>
+    api.admin.reviewAppeal(data.appealId, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['admin', 'appeals']);
+    toast.success('Appeal reviewed');
+  },
+});
+
+// Payouts
+const processPayoutMutation = useMutation({
+  mutationFn: (data: { payoutId: string; action: 'approve' | 'reject' | 'hold'; note?: string }) =>
+    api.admin.processPayout(data.payoutId, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['admin', 'payouts']);
+    toast.success('Payout processed');
+  },
+});
+
+// Author applications
+const reviewApplicationMutation = useMutation({
+  mutationFn: (data: { applicationId: string; decision: string; feedback: string }) =>
+    api.admin.reviewAuthorApplication(data.applicationId, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['admin', 'author-applications']);
+    toast.success('Application reviewed');
+  },
+});
+
+// Content submissions
+const reviewSubmissionMutation = useMutation({
+  mutationFn: (data: { submissionId: string; action: 'approve' | 'reject' | 'request-changes'; note?: string }) =>
+    api.admin.reviewSubmission(data.submissionId, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['admin', 'submissions']);
+    toast.success('Submission reviewed');
   },
 });
 ```
@@ -870,9 +1013,14 @@ function RequirePermission({ permission, children }) {
 | Ban users | ✓ | ✓ | ✗ | ✗ |
 | Delete users | ✓ | ✗ | ✗ | ✗ |
 | Moderate content | ✓ | ✓ | ✓ | ✗ |
-| System settings | ✓ | ✗ | ✗ | ✗ |
-| Financial reports | ✓ | ✓ | ✗ | ✗ |
+| Review submissions | ✓ | ✓ | ✓ | ✗ |
+| Review appeals | ✓ | ✓ | ✗ | ✗ |
 | Process payouts | ✓ | ✗ | ✗ | ✗ |
+| Review author applications | ✓ | ✓ | ✗ | ✗ |
+| View audit log | ✓ | ✗ | ✗ | ✗ |
+| System settings | ✓ | ✗ | ✗ | ✗ |
+| Auto-mod rules | ✓ | ✗ | ✗ | ✗ |
+| Financial reports | ✓ | ✓ | ✗ | ✗ |
 
 ---
 
@@ -886,40 +1034,475 @@ interface AuditLog {
   timestamp: Date;
   adminId: string;
   adminName: string;
+  adminRole: 'super_admin' | 'admin' | 'moderator' | 'support';
   action: AuditAction;
-  targetType: 'user' | 'story' | 'comment' | 'report' | 'system';
+  targetType: 'user' | 'story' | 'chapter' | 'comment' | 'report' | 'appeal' | 'payout' | 'submission' | 'system';
   targetId: string;
   details: Record<string, any>;
   ipAddress: string;
+  userAgent: string;
 }
 
-// All admin actions are logged
+// All admin actions are logged (append-only)
 const auditActions = [
+  // User enforcement
+  'USER_WARNED',
+  'USER_MUTED',
+  'USER_SUSPENDED',
   'USER_BANNED',
   'USER_UNBANNED',
-  'USER_WARNING_ISSUED',
+  'USER_ENFORCEMENT_LIFTED',
+  
+  // Content moderation
+  'CONTENT_APPROVED',
+  'CONTENT_REJECTED',
   'CONTENT_REMOVED',
   'CONTENT_RESTORED',
+  'CONTENT_FEATURED',
+  'CONTENT_UNFEATURED',
+  
+  // Reports
+  'REPORT_CLAIMED',
   'REPORT_RESOLVED',
+  'REPORT_ESCALATED',
+  'REPORT_DISMISSED',
+  
+  // Appeals
+  'APPEAL_GRANTED',
+  'APPEAL_DENIED',
+  'APPEAL_PARTIALLY_GRANTED',
+  
+  // Payouts
+  'PAYOUT_APPROVED',
+  'PAYOUT_REJECTED',
+  'PAYOUT_HELD',
+  
+  // Author applications
+  'APPLICATION_APPROVED',
+  'APPLICATION_REJECTED',
+  'APPLICATION_REQUESTED_MORE',
+  
+  // System
   'SETTINGS_CHANGED',
-  'PAYOUT_PROCESSED',
+  'AUTOMOD_RULE_CREATED',
+  'AUTOMOD_RULE_UPDATED',
+  'GUIDELINE_UPDATED',
 ];
 ```
 
 ---
 
-## 16. References
+## 16. Payout Administration (Super Admin)
 
-### 16.1 Related Documents
+### 16.1 Payout Queue
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Dashboard]                            Payout Queue           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐│
+│  │     💰       │ │     ⏳       │ │     ✅       │ │    🚫    ││
+│  │   $45,230    │ │     23       │ │     156      │ │    5     ││
+│  │   Pending    │ │   Awaiting   │ │   Approved   │ │ Rejected ││
+│  │   This Week  │ │   Review     │ │   This Month │ │ This Mon ││
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘│
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  🔍 [Search author...]    Status: [Pending ▼]    Amount: [All ▼]│
+│                                                                  │
+│  [Bulk Approve]  [Export Report]                                 │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Author          │ Amount   │ Method     │ Requested │ Action││
+│  ├─────────────────┼──────────┼────────────┼───────────┼───────┤│
+│  │ ✍️ @bestauthor  │ $2,450   │ PayPal     │ 2 days ago│ [···] ││
+│  │ Verified • 50 stories     │ Prev: 15 payouts      │       ││
+│  ├─────────────────┼──────────┼────────────┼───────────┼───────┤│
+│  │ ✍️ @newwriter   │ $150     │ Bank Xfer  │ 1 day ago │ [···] ││
+│  │ Verified • 3 stories      │ Prev: 0 payouts       │ ⚠️ NEW ││
+│  ├─────────────────┼──────────┼────────────┼───────────┼───────┤│
+│  │ ✍️ @prolific    │ $5,200   │ PayPal     │ 3 days ago│ [···] ││
+│  │ Verified • 120 stories    │ Prev: 45 payouts      │ 🔴 HIGH││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  Showing 1-25 of 23 pending        [← 1 →]                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 16.2 Payout Review Modal
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Review Payout Request                    [✕]  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  AUTHOR INFORMATION                                              │
+│                                                                  │
+│  ┌────┐  @bestauthor (Sarah Writer)                             │
+│  │ ✍️ │  sarah@email.com • Verified Author since Jan 2023      │
+│  └────┘  Total stories: 50 • Total earnings: $45,230            │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  PAYOUT DETAILS                                                  │
+│                                                                  │
+│  Requested Amount: $2,450.00                                     │
+│  Available Balance: $3,125.50                                    │
+│  Payment Method: PayPal (sarah.writer@paypal.com)               │
+│  Requested: January 10, 2024                                     │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  EARNINGS BREAKDOWN (This Period)                                │
+│                                                                  │
+│  Chapter Unlocks:  $1,850.00 (370 unlocks)                      │
+│  Gifts Received:   $450.00 (90 gifts)                           │
+│  Subscriptions:    $150.00 (30 readers)                         │
+│  ───────────────────────────────────                            │
+│  Total:            $2,450.00                                     │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  PAYOUT HISTORY                                                  │
+│                                                                  │
+│  Previous payouts: 15                                            │
+│  Total paid out: $25,500.00                                      │
+│  Last payout: Dec 15, 2023 ($2,100.00)                          │
+│  Average time: 2.3 days                                          │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  FRAUD CHECKS                                                    │
+│                                                                  │
+│  ✓ Identity verified                                             │
+│  ✓ Tax information on file                                       │
+│  ✓ Payment method verified                                       │
+│  ✓ No suspicious activity detected                               │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ADMIN DECISION                                                  │
+│                                                                  │
+│  ○ Approve payout                                                │
+│  ○ Hold for further review                                       │
+│  ○ Reject payout                                                 │
+│                                                                  │
+│  Internal notes:                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                                                              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                    Submit Decision                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 17. Appeals Queue
+
+### 17.1 Appeals Dashboard
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Dashboard]                            Appeals Queue          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐│
+│  │     📋       │ │     ⏳       │ │     ✅       │ │    🚫    ││
+│  │     45       │ │     12       │ │     28       │ │    5     ││
+│  │    Total     │ │   Pending    │ │   Granted    │ │  Denied  ││
+│  │   Appeals    │ │   Review     │ │   Appeals    │ │ Appeals  ││
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘│
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Type: [All ▼]   Status: [Pending ▼]   Priority: [All ▼]        │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ User            │ Type           │ Related To   │ Submitted ││
+│  ├─────────────────┼────────────────┼──────────────┼───────────┤│
+│  │ 👤 @user123     │ Account Ban    │ Harassment   │ 2 days ago││
+│  │ "I was wrongly banned..."       │              │ PENDING   ││
+│  ├─────────────────┼────────────────┼──────────────┼───────────┤│
+│  │ ✍️ @author456   │ Content Removal│ Plagiarism   │ 3 days ago││
+│  │ "This is original content..."   │              │ PENDING   ││
+│  ├─────────────────┼────────────────┼──────────────┼───────────┤│
+│  │ 👤 @reader789   │ Warning        │ Spam         │ 5 days ago││
+│  │ "First offense, please..."      │              │ IN_REVIEW ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 17.2 Appeal Review Page
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Appeals]                              Review Appeal          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  APPEAL DETAILS                                                  │
+│                                                                  │
+│  User: @user123 (John Doe)                                       │
+│  Appeal Type: Account Ban                                        │
+│  Submitted: January 10, 2024                                     │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ORIGINAL ENFORCEMENT                                            │
+│                                                                  │
+│  Type: Permanent Ban                                             │
+│  Reason: Harassment - Targeted abuse toward another user         │
+│  Enforced by: @moderator1                                        │
+│  Date: January 5, 2024                                           │
+│                                                                  │
+│  Related Report: #4521                                           │
+│  Evidence: [View Original Report]                                │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  USER'S APPEAL                                                   │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ I believe this ban was issued in error. The messages that   ││
+│  │ were flagged were part of a roleplay between friends. I     ││
+│  │ have screenshots showing we were both participating...      ││
+│  │                                                              ││
+│  │ Evidence: [2 attachments]                                   ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  USER HISTORY                                                    │
+│                                                                  │
+│  Account age: 2 years                                            │
+│  Previous warnings: 0                                            │
+│  Previous bans: 0                                                │
+│  Content created: 45 comments, 12 reviews                        │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  DECISION                                                        │
+│                                                                  │
+│  ○ Grant appeal - Lift enforcement                              │
+│  ○ Partially grant - Reduce enforcement                         │
+│  ○ Deny appeal - Uphold enforcement                             │
+│                                                                  │
+│  Decision note (will be sent to user):                          │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                                                              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  Internal notes (admin only):                                    │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                                                              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                    Submit Decision                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 18. Author Applications
+
+### 18.1 Applications Queue
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Dashboard]                        Author Applications        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐│
+│  │     📝       │ │     ⏳       │ │     ✅       │ │    🚫    ││
+│  │     85       │ │     32       │ │     48       │ │    5     ││
+│  │    Total     │ │   Pending    │ │   Approved   │ │  Rejected││
+│  │   This Month │ │   Review     │ │   Authors    │ │ This Mon ││
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘│
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Status: [Pending ▼]    Sort: [Oldest First ▼]                  │
+│                                                                  │
+│  [Bulk Review]  [Export Applications]                            │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Applicant       │ Submitted    │ Sample Work  │ Status      ││
+│  ├─────────────────┼──────────────┼──────────────┼─────────────┤│
+│  │ 👤 @aspiringauth│ Jan 5, 2024  │ 3 samples    │ Pending     ││
+│  │ "I want to share my fantasy stories..."       │ [Review →]  ││
+│  ├─────────────────┼──────────────┼──────────────┼─────────────┤│
+│  │ 👤 @newtalent   │ Jan 6, 2024  │ 5 samples    │ Pending     ││
+│  │ "Romance writer with 2 years experience..."   │ [Review →]  ││
+│  ├─────────────────┼──────────────┼──────────────┼─────────────┤│
+│  │ 👤 @scifiwriter │ Jan 7, 2024  │ 2 samples    │ In Review   ││
+│  │ "Published author looking to expand..."       │ @admin1     ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 18.2 Application Review Page
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Applications]                        Review Application      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  APPLICANT PROFILE                                               │
+│                                                                  │
+│  ┌────┐  @aspiringauthor (Alex Writer)                          │
+│  │ 👤 │  alex@email.com                                         │
+│  └────┘  Member since: June 2023 • Reader for 8 months          │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  APPLICATION DETAILS                                             │
+│                                                                  │
+│  Genre preference: Fantasy, Adventure                            │
+│  Writing experience: 3 years                                     │
+│  Published elsewhere: Wattpad, Medium                            │
+│                                                                  │
+│  Personal statement:                                             │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ I've been writing fantasy stories for 3 years and have      ││
+│  │ built a small following on Wattpad. I'm looking to reach    ││
+│  │ a new audience and eventually monetize my work...           ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  SAMPLE WORKS                                                    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ 📄 "The Crystal Kingdom" - Chapter 1 (2,500 words)         │ │
+│  │    Fantasy • Dragons, Magic, Adventure                      │ │
+│  │    [Read Sample]                                            │ │
+│  ├────────────────────────────────────────────────────────────┤ │
+│  │ 📄 "Midnight Journey" - Prologue (1,800 words)             │ │
+│  │    Adventure • Travel, Discovery                            │ │
+│  │    [Read Sample]                                            │ │
+│  ├────────────────────────────────────────────────────────────┤ │
+│  │ 📄 "The Last Guardian" - Opening (2,200 words)             │ │
+│  │    Fantasy • Guardians, Ancient Magic                       │ │
+│  │    [Read Sample]                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  QUALITY ASSESSMENT                                              │
+│                                                                  │
+│  Writing quality: [Excellent ▼]                                  │
+│  Grammar/spelling: [Good ▼]                                      │
+│  Storytelling: [Very Good ▼]                                     │
+│  Platform fit: [Good Match ▼]                                    │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  DECISION                                                        │
+│                                                                  │
+│  ○ Approve - Grant author status                                │
+│  ○ Request more samples                                         │
+│  ○ Reject - Does not meet requirements                          │
+│                                                                  │
+│  Feedback to applicant:                                          │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Welcome to N9! Your writing samples show great promise...   ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                    Submit Decision                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 19. Audit Log Viewer
+
+### 19.1 Audit Log Page
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [← Dashboard]                            Audit Log              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Date Range: [Jan 1] to [Jan 15]    Admin: [All ▼]              │
+│  Action Type: [All ▼]    Target: [All ▼]                        │
+│                                                                  │
+│  [Export Log]  [Real-time View]                                  │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Time        │ Admin     │ Action          │ Target   │ IP   ││
+│  ├─────────────┼───────────┼─────────────────┼──────────┼──────┤│
+│  │ 14:35:22    │ @admin1   │ USER_BANNED     │ @user123 │ Mask ││
+│  │ Jan 15      │           │ Reason: Harassment          │      ││
+│  ├─────────────┼───────────┼─────────────────┼──────────┼──────┤│
+│  │ 14:20:15    │ @mod2     │ CONTENT_REMOVED │ Story#45 │ Mask ││
+│  │ Jan 15      │           │ Reason: Plagiarism          │      ││
+│  ├─────────────┼───────────┼─────────────────┼──────────┼──────┤│
+│  │ 13:45:00    │ @super    │ PAYOUT_APPROVED │ Payout#12│ Mask ││
+│  │ Jan 15      │           │ Amount: $2,450              │      ││
+│  ├─────────────┼───────────┼─────────────────┼──────────┼──────┤│
+│  │ 12:30:45    │ @admin1   │ SETTINGS_CHANGED│ System   │ Mask ││
+│  │ Jan 15      │           │ Rate limit updated          │      ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  [← 1 2 3 4 5 ... →]                                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 20. References
+
+### 20.1 Related Design Documents
 
 | Document | Purpose |
 |----------|---------|
 | [01_FRONTEND_ARCHITECTURE.md](../01_FRONTEND_ARCHITECTURE.md) | Project structure |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
+| [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns |
 
-### 16.2 Backend APIs
+### 20.2 Backend Component References
+
+| Document | Purpose |
+|----------|---------|
+| [10_MODERATION_ADMIN_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/10_MODERATION_ADMIN_COMPONENT.md) | Backend admin APIs |
+| [03_PAYMENTS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/03_PAYMENTS_COMPONENT.md) | Payment/payout system |
+| [01_USERS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_USERS_COMPONENT.md) | User management |
+
+### 20.3 Specification References
 
 | Document | Purpose |
 |----------|---------|
 | [12_PERMISSION_MATRIX.md](../../Specification/12_PERMISSION_MATRIX.md) | Role permissions |
 | [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Admin endpoints |
+
+---
+
+## 21. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial document |
+| 2.0 | 2026-01-05 | Frontend Team | Added comprehensive backend API alignment, payout administration section, appeals queue section, author applications section, audit log viewer, extended routes configuration, updated references with backend component links |

@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Backend Reference | [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md), [04_INTERACTIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **story pages** for the N9 platform, including story detail, chapter list, and related story functionality.
+This document specifies the **story pages** for the N9 platform, including story detail, chapter list, reviews, ratings, and related story functionality. Aligned with backend Stories and Interactions components.
 
 ### 2.2 User Flows
 
@@ -41,16 +42,38 @@ This document specifies the **story pages** for the N9 platform, including story
 
 ### 2.3 Related Backend APIs
 
+#### Story Detail Endpoints
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/stories/:id` | GET | Story details |
-| `/stories/:id/chapters` | GET | Chapter list |
-| `/stories/:id/reviews` | GET | Story reviews |
-| `/stories/:id/reviews` | POST | Submit review |
-| `/stories/:id/rating` | POST | Rate story |
-| `/stories/:id/bookmark` | POST | Bookmark story |
-| `/stories/:id/similar` | GET | Similar stories |
-| `/library/stories/:id` | POST | Add to library |
+|----------|--------|----------|
+| `/api/v1/stories/{id}` | GET | Story details |
+| `/api/v1/stories/{id}/chapters` | GET | Chapter list with pagination |
+| `/api/v1/stories/{id}/chapters/{chapterId}` | GET | Single chapter metadata |
+| `/api/v1/stories/{id}/statistics` | GET | Story statistics |
+
+#### Interaction Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/stories/{id}/reviews` | GET | Story reviews (paginated) |
+| `/api/v1/stories/{id}/reviews` | POST | Submit new review |
+| `/api/v1/stories/{id}/reviews/{reviewId}` | PUT | Update review |
+| `/api/v1/stories/{id}/reviews/{reviewId}` | DELETE | Delete review |
+| `/api/v1/stories/{id}/rating` | GET | Get user's rating |
+| `/api/v1/stories/{id}/rating` | POST | Rate story |
+| `/api/v1/stories/{id}/rating` | DELETE | Remove rating |
+
+#### Library Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/library/add` | POST | Add story to library |
+| `/api/v1/library/remove/{storyId}` | DELETE | Remove from library |
+| `/api/v1/library/check/{storyId}` | GET | Check if in library |
+
+#### Social Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/stories/{id}/share` | POST | Generate share link |
+| `/api/v1/stories/{id}/similar` | GET | Similar stories |
+| `/api/v1/stories/{id}/report` | POST | Report story |
 
 ---
 
@@ -774,15 +797,26 @@ function StoryLink({ slug, children }) {
 
 ## 14. References
 
-### 14.1 Related Documents
+### 14.1 Related Design Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [04_READER_PAGES.md](./04_READER_PAGES.md) | Chapter reader |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
+| [01_FRONTEND_ARCHITECTURE.md](../01_FRONTEND_ARCHITECTURE.md) | Architecture patterns |
 
-### 14.2 Backend APIs
+### 14.2 Backend Component References
 
 | Document | Purpose |
-|----------|---------|
-| [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Story endpoints |
+|----------|----------|
+| [01_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_STORIES_COMPONENT.md) | Stories API |
+| [04_INTERACTIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) | Reviews, ratings, comments |
+
+---
+
+## 15. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial story pages specification |
+| 2.0 | 2026-01-04 | Frontend Team | Added comprehensive API endpoints (ratings, reviews, library, social), backend component references, enhanced accessibility section |

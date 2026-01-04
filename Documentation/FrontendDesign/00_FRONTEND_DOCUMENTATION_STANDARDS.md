@@ -4,18 +4,20 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-05 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Specification Reference | [FrontendSpecification](../Specification/) |
+| Backend Reference | [BackendDesign/Components](../../../../Backend/N9/Documentation/BackendDesign/Components/) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document establishes **documentation standards** for all Frontend Design documents in the N9 platform, ensuring consistency, completeness, and implementability across the frontend codebase.
+This document establishes **documentation standards** for all Frontend Design documents in the N9 platform, ensuring consistency, completeness, and implementability across the frontend codebase. All documents must maintain alignment with both Frontend Specification and Backend Component documentation.
 
 ### 2.2 Technology Stack
 
@@ -81,6 +83,11 @@ Each page document (`FrontendDesign/Pages/XX_*.md`) must follow this structure:
 |-----------|-------|
 | Version | x.x |
 | Last Updated | YYYY-MM-DD |
+| Status | Approved |
+| Owner | Frontend Engineering Team |
+| Review Cycle | Quarterly |
+| Specification Reference | [XX_SPEC.md](../../Specification/XX_SPEC.md) |
+| Backend Reference | [XX_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/XX_COMPONENT.md) |
 
 ## 2. Overview
 - Purpose of page category
@@ -92,25 +99,36 @@ Each page document (`FrontendDesign/Pages/XX_*.md`) must follow this structure:
 - Navigation guards and redirects
 - Breadcrumb configuration
 
-## 4. Page Specifications
-### 4.X [Page Name]
-#### 4.X.1 Purpose & User Story
-#### 4.X.2 Route Configuration
-#### 4.X.3 Layout Structure
-#### 4.X.4 Component Hierarchy
-#### 4.X.5 State Management
-#### 4.X.6 API Integration
-#### 4.X.7 User Interactions
-#### 4.X.8 Loading & Error States
-#### 4.X.9 Responsive Behavior
-#### 4.X.10 Accessibility Requirements
+## 4. API Endpoints
+- List all backend API endpoints used
+- Group by feature/domain
+- Include method, path, and purpose
 
-## 5. Shared Page Components
+## 5. Page Specifications
+### 5.X [Page Name]
+#### 5.X.1 Purpose & User Story
+#### 5.X.2 Route Configuration
+#### 5.X.3 Layout Structure
+#### 5.X.4 Component Hierarchy
+#### 5.X.5 State Management
+#### 5.X.6 API Integration
+#### 5.X.7 User Interactions
+#### 5.X.8 Loading & Error States
+#### 5.X.9 Responsive Behavior
+#### 5.X.10 Accessibility Requirements
+
+## 6. Shared Page Components
 - Components used across multiple pages in category
 
-## 6. References
-- Related specifications
-- API documentation links
+## 7. References
+### 7.1 Related Design Documents
+### 7.2 Backend Component References
+### 7.3 Specification References
+
+## 8. Revision History
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| x.x | YYYY-MM-DD | Team | Changes made |
 ```
 
 ### 4.2 Page Specification Card
@@ -403,7 +421,7 @@ Each page must specify:
 
 ## 11. Cross-References
 
-### 11.1 Related Documents
+### 11.1 Related Design Documents
 
 | Document | Purpose |
 |----------|---------|
@@ -413,10 +431,32 @@ Each page must specify:
 | [04_SHARED_COMPONENTS.md](04_SHARED_COMPONENTS.md) | Component library |
 | [05_MOBILE_RESPONSIVE_DESIGN.md](05_MOBILE_RESPONSIVE_DESIGN.md) | Mobile specifications |
 
-### 11.2 Backend References
+### 11.2 Backend Component References
+
+| Document | Purpose |
+|----------|---------|
+| [01_USERS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/01_USERS_COMPONENT.md) | User management APIs |
+| [02_STORIES_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/02_STORIES_COMPONENT.md) | Stories & chapters APIs |
+| [03_PAYMENTS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/03_PAYMENTS_COMPONENT.md) | Payment & wallet APIs |
+| [04_INTERACTIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) | Comments, reviews, reactions |
+| [05_SEARCH_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/05_SEARCH_COMPONENT.md) | Search functionality |
+| [06_NOTIFICATIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/06_NOTIFICATIONS_COMPONENT.md) | Notification system |
+| [10_MODERATION_ADMIN_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/10_MODERATION_ADMIN_COMPONENT.md) | Admin & moderation APIs |
+
+### 11.3 Specification References
 
 | Document | Purpose |
 |----------|---------|
 | [08_API_STANDARDS.md](../Specification/08_API_STANDARDS.md) | API conventions |
 | [13_API_CATALOG.md](../Specification/13_API_CATALOG.md) | Endpoint reference |
 | [09_ERROR_HANDLING.md](../Specification/09_ERROR_HANDLING.md) | Error codes |
+| [12_PERMISSION_MATRIX.md](../Specification/12_PERMISSION_MATRIX.md) | Role permissions |
+
+---
+
+## 12. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial documentation standards |
+| 2.0 | 2026-01-05 | Frontend Team | Enhanced template with specification and backend references, added revision history requirement, updated cross-references with backend component links |

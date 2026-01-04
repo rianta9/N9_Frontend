@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Platform Target | Web (Responsive) + React Native (iOS/Android) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **mobile and responsive design guidelines** for the N9 platform, covering responsive breakpoints, mobile-specific patterns, touch interactions, and React Native considerations.
+This document specifies the **mobile and responsive design guidelines** for the N9 platform, covering responsive breakpoints, mobile-specific patterns, touch interactions, offline support, performance budgets, and React Native considerations.
 
 ### 2.2 Platform Strategy
 
@@ -886,17 +887,124 @@ const testingStrategy = {
 
 ---
 
-## 13. References
+## 13. Mobile Performance Budgets
 
-### 13.1 Related Documents
+### 13.1 Loading Performance
+
+| Metric | Target (3G) | Target (4G) | Critical |
+|--------|-------------|-------------|----------|
+| FCP | <3s | <1.5s | >4s |
+| LCP | <4s | <2.5s | >5s |
+| TTI | <5s | <3.5s | >7s |
+| CLS | <0.1 | <0.1 | >0.25 |
+| Bundle Size | <200KB | <200KB | >300KB |
+
+### 13.2 Runtime Performance
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Frame Rate | 60fps | React DevTools |
+| Memory Usage | <150MB | Chrome DevTools |
+| JS Execution | <50ms/frame | Performance API |
+| Touch Response | <100ms | User testing |
+
+### 13.3 Image Optimization
+
+```typescript
+const imageOptimization = {
+  formats: ['webp', 'avif', 'jpg'],
+  quality: 80,
+  sizes: {
+    thumbnail: { width: 100, height: 150 },
+    card: { width: 200, height: 300 },
+    hero: { width: 400, height: 600 },
+  },
+  lazyLoad: true,
+  placeholders: 'blur', // blur, color, none
+};
+```
+
+---
+
+## 14. PWA Configuration
+
+### 14.1 Service Worker
+
+```typescript
+// sw.js configuration
+const cacheStrategies = {
+  // Cache first for static assets
+  static: {
+    strategy: 'CacheFirst',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    assets: ['/fonts/*', '/images/*', '/icons/*'],
+  },
+  
+  // Network first for API
+  api: {
+    strategy: 'NetworkFirst',
+    timeout: 5000,
+    fallback: 'cache',
+    routes: ['/api/*'],
+  },
+  
+  // Stale-while-revalidate for pages
+  pages: {
+    strategy: 'StaleWhileRevalidate',
+    routes: ['/', '/browse', '/story/*'],
+  },
+};
+```
+
+### 14.2 App Manifest
+
+```json
+{
+  "name": "N9 - Story Reading Platform",
+  "short_name": "N9",
+  "description": "Discover and read amazing stories",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/icons/192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
+```
+
+### 14.3 Offline Capabilities
+
+| Feature | Offline Support | Sync Strategy |
+|---------|-----------------|---------------|
+| Reading | Full (downloaded) | Background sync |
+| Library | Cached list | Sync on reconnect |
+| Progress | Local storage | Merge on sync |
+| Search | Basic cache | Network required |
+| Payments | Queue actions | Sync when online |
+
+---
+
+## 15. References
+
+### 15.1 Related Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [01_FRONTEND_ARCHITECTURE.md](01_FRONTEND_ARCHITECTURE.md) | Architecture overview |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](02_DESIGN_SYSTEM_GUIDELINES.md) | Design tokens |
 | [04_SHARED_COMPONENTS.md](04_SHARED_COMPONENTS.md) | Component library |
 
-### 13.2 External Resources
+### 15.2 Backend References
+
+| Document | Purpose |
+|----------|----------|
+| [05_READINGS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md) | Reading progress sync |
+| [07_NOTIFICATIONS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) | Push notifications |
+
+### 15.3 External Resources
 
 | Resource | Link |
 |----------|------|
@@ -904,3 +1012,13 @@ const testingStrategy = {
 | Material Design | https://m3.material.io |
 | React Native | https://reactnative.dev |
 | React Navigation | https://reactnavigation.org |
+| Web Vitals | https://web.dev/vitals |
+
+---
+
+## 16. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial mobile design document |
+| 2.0 | 2026-01-04 | Frontend Team | Added mobile performance budgets, PWA configuration, offline capabilities, backend references for sync |

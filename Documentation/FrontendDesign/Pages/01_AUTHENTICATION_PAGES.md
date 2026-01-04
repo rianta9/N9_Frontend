@@ -4,18 +4,19 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-04 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Backend Reference | [02_USERS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/02_USERS_COMPONENT.md) |
 
 ---
 
 ## 2. Overview
 
 ### 2.1 Purpose
-This document specifies the **authentication pages** for the N9 platform, including login, registration, password reset, and email verification flows.
+This document specifies the **authentication pages** for the N9 platform, including login, registration, password reset, email verification, MFA flows, and OAuth integration. Aligned with backend Users component for secure authentication.
 
 ### 2.2 User Flows
 
@@ -42,16 +43,33 @@ This document specifies the **authentication pages** for the N9 platform, includ
 
 ### 2.3 Related Backend APIs
 
+#### Authentication Endpoints
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/auth/register` | POST | User registration |
-| `/auth/login` | POST | User login |
-| `/auth/logout` | POST | User logout |
-| `/auth/refresh` | POST | Refresh access token |
-| `/auth/forgot-password` | POST | Request password reset |
-| `/auth/reset-password` | POST | Reset password |
-| `/auth/verify-email` | POST | Verify email address |
-| `/auth/mfa/verify` | POST | Verify MFA code |
+|----------|--------|----------|
+| `/api/v1/auth/register` | POST | User registration |
+| `/api/v1/auth/login` | POST | User login |
+| `/api/v1/auth/logout` | POST | User logout |
+| `/api/v1/auth/refresh` | POST | Refresh access token |
+| `/api/v1/auth/forgot-password` | POST | Request password reset |
+| `/api/v1/auth/reset-password` | POST | Reset password |
+| `/api/v1/auth/verify-email` | POST | Verify email address |
+| `/api/v1/auth/resend-verification` | POST | Resend verification email |
+
+#### MFA Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/auth/mfa/setup` | POST | Setup MFA |
+| `/api/v1/auth/mfa/verify` | POST | Verify MFA code |
+| `/api/v1/auth/mfa/recovery` | POST | Use recovery code |
+| `/api/v1/auth/mfa/disable` | POST | Disable MFA |
+
+#### OAuth Endpoints
+| Endpoint | Method | Purpose |
+|----------|--------|----------|
+| `/api/v1/auth/oauth/google` | GET | Google OAuth redirect |
+| `/api/v1/auth/oauth/google/callback` | GET | Google OAuth callback |
+| `/api/v1/auth/oauth/apple` | GET | Apple OAuth redirect |
+| `/api/v1/auth/oauth/apple/callback` | GET | Apple OAuth callback |
 
 ---
 
@@ -645,18 +663,72 @@ export function OAuthButton({ provider }: OAuthButtonProps) {
 
 ---
 
-## 12. References
+## 12. Security Considerations
 
-### 12.1 Related Documents
+### 12.1 Token Management
+
+```typescript
+// Secure token storage
+const tokenConfig = {
+  accessToken: {
+    storage: 'memory', // Never localStorage
+    expiry: 15 * 60 * 1000, // 15 minutes
+  },
+  refreshToken: {
+    storage: 'httpOnly cookie',
+    expiry: 7 * 24 * 60 * 60 * 1000, // 7 days
+    secure: true,
+    sameSite: 'strict',
+  },
+};
+```
+
+### 12.2 Rate Limiting
+
+| Action | Limit | Window | Lockout |
+|--------|-------|--------|----------|
+| Login attempts | 5 | 15 min | 30 min |
+| Password reset | 3 | 1 hour | 24 hours |
+| Email verification | 5 | 1 hour | 1 hour |
+| MFA attempts | 5 | 5 min | 15 min |
+
+### 12.3 Password Requirements
+
+```typescript
+const passwordRequirements = {
+  minLength: 8,
+  maxLength: 128,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumber: true,
+  requireSpecial: false,
+  preventCommon: true, // Check against common passwords
+  preventUserInfo: true, // Check against username/email
+};
+```
+
+---
+
+## 13. References
+
+### 13.1 Related Design Documents
 
 | Document | Purpose |
-|----------|---------|
+|----------|----------|
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
 | [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | Auth state |
 
-### 12.2 Backend APIs
+### 13.2 Backend Component References
 
 | Document | Purpose |
-|----------|---------|
-| [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Auth endpoints |
-| [05_SECURITY_AND_COMPLIANCE.md](../../Specification/05_SECURITY_AND_COMPLIANCE.md) | Security requirements |
+|----------|----------|
+| [02_USERS_COMPONENT.md](../../../../Backend/N9/Documentation/BackendDesign/Components/02_USERS_COMPONENT.md) | User authentication APIs |
+
+---
+
+## 14. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|----------|
+| 1.0 | 2025-12-31 | Frontend Team | Initial authentication pages |
+| 2.0 | 2026-01-04 | Frontend Team | Added comprehensive API endpoints (MFA, OAuth), security considerations, token management, rate limiting, password requirements, backend component references |

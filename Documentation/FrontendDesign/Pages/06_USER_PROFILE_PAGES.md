@@ -4,11 +4,13 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-05 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Specification | [08_PAGES_SPECIFICATION.md](../FrontendSpecification/08_PAGES_SPECIFICATION.md) |
+| Backend Reference | [01_USERS_COMPONENT.md](../../BackendSpecification/Components/01_USERS_COMPONENT.md) |
 
 ---
 
@@ -46,6 +48,7 @@ This document specifies the **user profile pages** for the N9 platform, includin
 | `/users/:username` | GET | Public profile |
 | `/users/:username/stories` | GET | User's stories |
 | `/users/:username/reviews` | GET | User's reviews |
+| `/users/:username/reading-lists` | GET | User's public reading lists |
 | `/users/me` | GET/PUT | Current user profile |
 | `/users/me/settings` | GET/PUT | User settings |
 | `/users/:id/follow` | POST/DELETE | Follow/unfollow |
@@ -53,6 +56,8 @@ This document specifies the **user profile pages** for the N9 platform, includin
 | `/users/me/following` | GET | Following list |
 | `/notifications` | GET | Notifications |
 | `/notifications/:id/read` | PUT | Mark as read |
+| `/notifications/read-all` | PUT | Mark all as read |
+| `/notifications/settings` | GET/PUT | Notification preferences |
 
 ---
 
@@ -852,11 +857,23 @@ function useSettingsForm<T>(section: string, schema: ZodSchema<T>) {
 |----------|---------|
 | [01_FRONTEND_ARCHITECTURE.md](../01_FRONTEND_ARCHITECTURE.md) | Project structure |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
-| [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns |
+| [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns (NotificationStore) |
+| [04_SHARED_COMPONENTS.md](../04_SHARED_COMPONENTS.md) | NotificationItem, UserCard components |
 
-### 11.2 Backend APIs
+### 11.2 Backend References
 
 | Document | Purpose |
 |----------|---------|
+| [01_USERS_COMPONENT.md](../../BackendSpecification/Components/01_USERS_COMPONENT.md) | User management, follows, profiles |
+| [07_NOTIFICATIONS_COMPONENT.md](../../BackendSpecification/Components/07_NOTIFICATIONS_COMPONENT.md) | Notification system |
 | [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | User endpoints |
 | [05_SECURITY_AND_COMPLIANCE.md](../../Specification/05_SECURITY_AND_COMPLIANCE.md) | Privacy requirements |
+
+---
+
+## 12. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Engineering Team | Initial user profile pages design |
+| 2.0 | 2026-01-05 | Frontend Engineering Team | Added backend references, extended API endpoints with reading lists and notification settings, linked to component documentation. |

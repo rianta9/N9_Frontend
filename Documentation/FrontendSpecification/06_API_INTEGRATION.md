@@ -1194,8 +1194,1153 @@ export function useRealtimeComments(chapterId: string) {
 
 ---
 
-## 11. Related Documents
+---
+
+## 10. Additional Domain Services
+
+### 10.1 User Service
+
+```typescript
+// features/users/api/userService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  User, 
+  UserProfile, 
+  UserPreferences, 
+  UpdateProfileData,
+  AuthorApplication,
+  PaginatedResponse 
+} from '../types';
+
+class UserService extends BaseService {
+  constructor() {
+    super('');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROFILE APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getCurrentUser(): Promise<User> {
+    return this.get<User>('/me');
+  }
+  
+  async updateCurrentUser(data: UpdateProfileData): Promise<User> {
+    return this.put<User>('/me', data);
+  }
+  
+  async deleteAccount(): Promise<void> {
+    return this.delete('/me');
+  }
+  
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.put('/me/password', { currentPassword, newPassword });
+  }
+  
+  async updateAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return this.put('/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PUBLIC PROFILE APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getProfile(userId: string): Promise<UserProfile> {
+    return this.get<UserProfile>(`/users/${userId}`);
+  }
+  
+  async getUserStories(userId: string, filters?: StoryFilters): Promise<PaginatedResponse<Story>> {
+    return this.getWithMeta<Story[]>(`/users/${userId}/stories`, { params: filters });
+  }
+  
+  async getFollowers(userId: string, page?: number): Promise<PaginatedResponse<User>> {
+    return this.getWithMeta<User[]>(`/users/${userId}/followers`, { params: { page } });
+  }
+  
+  async getFollowing(userId: string, page?: number): Promise<PaginatedResponse<User>> {
+    return this.getWithMeta<User[]>(`/users/${userId}/following`, { params: { page } });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PREFERENCES APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getPreferences(): Promise<UserPreferences> {
+    return this.get<UserPreferences>('/me/preferences');
+  }
+  
+  async updatePreferences(data: Partial<UserPreferences>): Promise<UserPreferences> {
+    return this.put<UserPreferences>('/me/preferences', data);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SOCIAL APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async followUser(userId: string): Promise<void> {
+    return this.post(`/users/${userId}/follow`);
+  }
+  
+  async unfollowUser(userId: string): Promise<void> {
+    return this.delete(`/users/${userId}/follow`);
+  }
+  
+  async blockUser(userId: string): Promise<void> {
+    return this.post(`/users/${userId}/block`);
+  }
+  
+  async unblockUser(userId: string): Promise<void> {
+    return this.delete(`/users/${userId}/block`);
+  }
+  
+  async getBlockedUsers(): Promise<User[]> {
+    return this.get<User[]>('/me/blocked');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTHOR APPLICATION APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async applyForAuthor(data: AuthorApplication): Promise<void> {
+    return this.post('/me/author-application', data);
+  }
+  
+  async getAuthorApplicationStatus(): Promise<{ status: string; submittedAt?: string }> {
+    return this.get('/me/author-application');
+  }
+}
+
+export const userService = new UserService();
+```
+
+### 10.2 Interaction Service
+
+```typescript
+// features/interactions/api/interactionService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  Follow,
+  Like,
+  Review,
+  ReviewVote,
+  Comment,
+  Report,
+  PaginatedResponse 
+} from '../types';
+
+class InteractionService extends BaseService {
+  constructor() {
+    super('');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FOLLOWS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async followStory(storyId: string): Promise<void> {
+    return this.post(`/stories/${storyId}/follow`);
+  }
+  
+  async unfollowStory(storyId: string): Promise<void> {
+    return this.delete(`/stories/${storyId}/follow`);
+  }
+  
+  async followAuthor(authorId: string): Promise<void> {
+    return this.post(`/users/${authorId}/follow`);
+  }
+  
+  async unfollowAuthor(authorId: string): Promise<void> {
+    return this.delete(`/users/${authorId}/follow`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIKES APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async likeStory(storyId: string): Promise<void> {
+    return this.post(`/stories/${storyId}/like`);
+  }
+  
+  async unlikeStory(storyId: string): Promise<void> {
+    return this.delete(`/stories/${storyId}/like`);
+  }
+  
+  async likeChapter(chapterId: string): Promise<void> {
+    return this.post(`/chapters/${chapterId}/like`);
+  }
+  
+  async unlikeChapter(chapterId: string): Promise<void> {
+    return this.delete(`/chapters/${chapterId}/like`);
+  }
+  
+  async likeComment(commentId: string): Promise<void> {
+    return this.post(`/comments/${commentId}/like`);
+  }
+  
+  async unlikeComment(commentId: string): Promise<void> {
+    return this.delete(`/comments/${commentId}/like`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BOOKMARKS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getBookmarks(): Promise<PaginatedResponse<Story>> {
+    return this.getWithMeta<Story[]>('/me/bookmarks');
+  }
+  
+  async bookmarkStory(storyId: string): Promise<void> {
+    return this.post(`/stories/${storyId}/bookmark`);
+  }
+  
+  async removeBookmark(storyId: string): Promise<void> {
+    return this.delete(`/stories/${storyId}/bookmark`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REVIEWS APIs (Backend: 04_INTERACTIONS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getStoryReviews(storyId: string, filters?: ReviewFilters): Promise<PaginatedResponse<Review>> {
+    return this.getWithMeta<Review[]>(`/stories/${storyId}/reviews`, { params: filters });
+  }
+  
+  async createReview(storyId: string, data: CreateReviewData): Promise<Review> {
+    return this.post<Review>(`/stories/${storyId}/reviews`, data);
+  }
+  
+  async updateReview(reviewId: string, data: UpdateReviewData): Promise<Review> {
+    return this.put<Review>(`/reviews/${reviewId}`, data);
+  }
+  
+  async deleteReview(reviewId: string): Promise<void> {
+    return this.delete(`/reviews/${reviewId}`);
+  }
+  
+  async voteReviewHelpful(reviewId: string, isHelpful: boolean): Promise<void> {
+    return this.post(`/reviews/${reviewId}/vote`, { isHelpful });
+  }
+  
+  async removeReviewVote(reviewId: string): Promise<void> {
+    return this.delete(`/reviews/${reviewId}/vote`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMMENTS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getChapterComments(chapterId: string, filters?: CommentFilters): Promise<PaginatedResponse<Comment>> {
+    return this.getWithMeta<Comment[]>(`/chapters/${chapterId}/comments`, { params: filters });
+  }
+  
+  async getComment(commentId: string): Promise<Comment> {
+    return this.get<Comment>(`/comments/${commentId}`);
+  }
+  
+  async createComment(data: CreateCommentData): Promise<Comment> {
+    return this.post<Comment>('/comments', data);
+  }
+  
+  async updateComment(commentId: string, content: string): Promise<Comment> {
+    return this.put<Comment>(`/comments/${commentId}`, { content });
+  }
+  
+  async deleteComment(commentId: string): Promise<void> {
+    return this.delete(`/comments/${commentId}`);
+  }
+  
+  async replyToComment(commentId: string, content: string): Promise<Comment> {
+    return this.post<Comment>(`/comments/${commentId}/reply`, { content });
+  }
+  
+  async getCommentReplies(commentId: string): Promise<Comment[]> {
+    return this.get<Comment[]>(`/comments/${commentId}/replies`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORT APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async reportStory(storyId: string, data: ReportData): Promise<void> {
+    return this.post(`/stories/${storyId}/report`, data);
+  }
+  
+  async reportChapter(chapterId: string, data: ReportData): Promise<void> {
+    return this.post(`/chapters/${chapterId}/report`, data);
+  }
+  
+  async reportComment(commentId: string, data: ReportData): Promise<void> {
+    return this.post(`/comments/${commentId}/report`, data);
+  }
+}
+
+export const interactionService = new InteractionService();
+```
+
+### 10.3 Reading List Service
+
+```typescript
+// features/library/api/readingListService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  ReadingList, 
+  ReadingListDetail,
+  CreateReadingListData,
+  UpdateReadingListData 
+} from '../types';
+
+class ReadingListService extends BaseService {
+  constructor() {
+    super('');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // READING LIST CRUD (Backend: 04_INTERACTIONS_COMPONENT - ReadingList entity)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getMyReadingLists(): Promise<ReadingList[]> {
+    return this.get<ReadingList[]>('/me/reading-lists');
+  }
+  
+  async getReadingList(listId: string): Promise<ReadingListDetail> {
+    return this.get<ReadingListDetail>(`/reading-lists/${listId}`);
+  }
+  
+  async createReadingList(data: CreateReadingListData): Promise<ReadingList> {
+    return this.post<ReadingList>('/me/reading-lists', data);
+  }
+  
+  async updateReadingList(listId: string, data: UpdateReadingListData): Promise<ReadingList> {
+    return this.put<ReadingList>(`/reading-lists/${listId}`, data);
+  }
+  
+  async deleteReadingList(listId: string): Promise<void> {
+    return this.delete(`/reading-lists/${listId}`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // READING LIST ITEMS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async addStoryToList(listId: string, storyId: string): Promise<void> {
+    return this.post(`/reading-lists/${listId}/stories`, { storyId });
+  }
+  
+  async removeStoryFromList(listId: string, storyId: string): Promise<void> {
+    return this.delete(`/reading-lists/${listId}/stories/${storyId}`);
+  }
+  
+  async reorderListItems(listId: string, storyIds: string[]): Promise<void> {
+    return this.put(`/reading-lists/${listId}/reorder`, { storyIds });
+  }
+}
+
+export const readingListService = new ReadingListService();
+```
+
+### 10.4 Reading Progress Service
+
+```typescript
+// features/readings/api/readingProgressService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  ReadingProgress, 
+  ReadingHistory,
+  ReadingStreak,
+  ReadingGoal,
+  ChapterBookmark 
+} from '../types';
+
+class ReadingProgressService extends BaseService {
+  constructor() {
+    super('');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRESS APIs (Backend: 05_READINGS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getProgress(storyId: string): Promise<ReadingProgress> {
+    return this.get<ReadingProgress>(`/me/reading-progress/${storyId}`);
+  }
+  
+  async updateProgress(storyId: string, data: UpdateProgressData): Promise<ReadingProgress> {
+    return this.put<ReadingProgress>(`/me/reading-progress/${storyId}`, data);
+  }
+  
+  async markChapterRead(chapterId: string): Promise<void> {
+    return this.post(`/chapters/${chapterId}/read`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HISTORY APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getReadingHistory(page?: number): Promise<PaginatedResponse<ReadingHistory>> {
+    return this.getWithMeta<ReadingHistory[]>('/me/reading-history', { params: { page } });
+  }
+  
+  async clearHistory(): Promise<void> {
+    return this.delete('/me/reading-history');
+  }
+  
+  async removeFromHistory(storyId: string): Promise<void> {
+    return this.delete(`/me/reading-history/${storyId}`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STREAK & GOALS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getStreak(): Promise<ReadingStreak> {
+    return this.get<ReadingStreak>('/me/reading-streak');
+  }
+  
+  async getGoals(): Promise<ReadingGoal> {
+    return this.get<ReadingGoal>('/me/reading-goals');
+  }
+  
+  async updateGoals(data: UpdateGoalData): Promise<ReadingGoal> {
+    return this.put<ReadingGoal>('/me/reading-goals', data);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BOOKMARKS APIs (In-chapter bookmarks)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getChapterBookmarks(chapterId: string): Promise<ChapterBookmark[]> {
+    return this.get<ChapterBookmark[]>(`/chapters/${chapterId}/bookmarks`);
+  }
+  
+  async createChapterBookmark(chapterId: string, position: number, note?: string): Promise<ChapterBookmark> {
+    return this.post<ChapterBookmark>(`/chapters/${chapterId}/bookmarks`, { position, note });
+  }
+  
+  async deleteChapterBookmark(bookmarkId: string): Promise<void> {
+    return this.delete(`/bookmarks/${bookmarkId}`);
+  }
+}
+
+export const readingProgressService = new ReadingProgressService();
+```
+
+### 10.5 Notification Service
+
+```typescript
+// features/notifications/api/notificationService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  Notification, 
+  NotificationPreferences,
+  PaginatedResponse 
+} from '../types';
+
+class NotificationService extends BaseService {
+  constructor() {
+    super('');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOTIFICATIONS APIs (Backend: 07_NOTIFICATIONS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getNotifications(page?: number): Promise<PaginatedResponse<Notification>> {
+    return this.getWithMeta<Notification[]>('/me/notifications', { params: { page } });
+  }
+  
+  async getUnreadCount(): Promise<{ count: number }> {
+    return this.get<{ count: number }>('/me/notifications/unread-count');
+  }
+  
+  async markAsRead(notificationId: string): Promise<void> {
+    return this.put(`/me/notifications/${notificationId}/read`);
+  }
+  
+  async markAllAsRead(): Promise<void> {
+    return this.put('/me/notifications/read-all');
+  }
+  
+  async deleteNotification(notificationId: string): Promise<void> {
+    return this.delete(`/me/notifications/${notificationId}`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOTIFICATION SETTINGS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getSettings(): Promise<NotificationPreferences> {
+    return this.get<NotificationPreferences>('/me/notification-settings');
+  }
+  
+  async updateSettings(data: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    return this.put<NotificationPreferences>('/me/notification-settings', data);
+  }
+}
+
+export const notificationService = new NotificationService();
+```
+
+### 10.6 Search Service
+
+```typescript
+// features/search/api/searchService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  SearchResult, 
+  SearchSuggestion,
+  TrendingSearch,
+  SearchFilters 
+} from '../types';
+
+class SearchService extends BaseService {
+  constructor() {
+    super('/search');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEARCH APIs (Backend: 13_API_CATALOG - Search section)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async globalSearch(query: string, filters?: SearchFilters): Promise<SearchResult> {
+    return this.get<SearchResult>('', { params: { q: query, ...filters } });
+  }
+  
+  async searchStories(query: string, filters?: SearchFilters): Promise<PaginatedResponse<Story>> {
+    return this.getWithMeta<Story[]>('/stories', { params: { q: query, ...filters } });
+  }
+  
+  async searchAuthors(query: string, page?: number): Promise<PaginatedResponse<User>> {
+    return this.getWithMeta<User[]>('/authors', { params: { q: query, page } });
+  }
+  
+  async searchTags(query: string): Promise<Tag[]> {
+    return this.get<Tag[]>('/tags', { params: { q: query } });
+  }
+  
+  async getSuggestions(query: string): Promise<SearchSuggestion[]> {
+    return this.get<SearchSuggestion[]>('/suggestions', { params: { q: query } });
+  }
+  
+  async getTrending(): Promise<TrendingSearch[]> {
+    return this.get<TrendingSearch[]>('/trending');
+  }
+}
+
+export const searchService = new SearchService();
+```
+
+### 10.7 Author Service
+
+```typescript
+// features/author/api/authorService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  AuthorDashboard,
+  AuthorStory,
+  EarningsSummary,
+  PayoutRequest,
+  PayoutHistory,
+  StoryAnalytics 
+} from '../types';
+
+class AuthorService extends BaseService {
+  constructor() {
+    super('/author');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getDashboard(): Promise<AuthorDashboard> {
+    return this.get<AuthorDashboard>('/dashboard');
+  }
+  
+  async getMyStories(filters?: AuthorStoryFilters): Promise<PaginatedResponse<AuthorStory>> {
+    return this.getWithMeta<AuthorStory[]>('/stories', { params: filters });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ANALYTICS APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getAnalytics(period?: string): Promise<AuthorAnalytics> {
+    return this.get<AuthorAnalytics>('/analytics', { params: { period } });
+  }
+  
+  async getStoryAnalytics(storyId: string, period?: string): Promise<StoryAnalytics> {
+    return this.get<StoryAnalytics>(`/stories/${storyId}/analytics`, { params: { period } });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EARNINGS & PAYOUTS APIs (Backend: 03_PAYMENTS_COMPONENT)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getEarnings(): Promise<EarningsSummary> {
+    return this.get<EarningsSummary>('/earnings');
+  }
+  
+  async requestPayout(amount: number, payoutMethod: string): Promise<PayoutRequest> {
+    return this.post<PayoutRequest>('/payout', { amount, payoutMethod });
+  }
+  
+  async getPayoutHistory(): Promise<PayoutHistory[]> {
+    return this.get<PayoutHistory[]>('/payouts');
+  }
+}
+
+export const authorService = new AuthorService();
+```
+
+### 10.8 Admin Service
+
+```typescript
+// features/admin/api/adminService.ts
+import { BaseService } from '@/lib/api/baseService';
+import type { 
+  AdminDashboard,
+  Report,
+  AdminUser,
+  AuditLog,
+  PendingPayout,
+  ModeratorAction 
+} from '../types';
+
+class AdminService extends BaseService {
+  constructor() {
+    super('/admin');
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getDashboard(): Promise<AdminDashboard> {
+    return this.get<AdminDashboard>('/dashboard');
+  }
+  
+  async getAnalytics(period?: string): Promise<AdminAnalytics> {
+    return this.get<AdminAnalytics>('/analytics', { params: { period } });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODERATION APIs (Backend: 13_API_CATALOG - Admin section)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getReports(filters?: ReportFilters): Promise<PaginatedResponse<Report>> {
+    return this.getWithMeta<Report[]>('/reports', { params: filters });
+  }
+  
+  async getReport(reportId: string): Promise<Report> {
+    return this.get<Report>(`/reports/${reportId}`);
+  }
+  
+  async resolveReport(reportId: string, resolution: ReportResolution): Promise<void> {
+    return this.post(`/reports/${reportId}/resolve`, resolution);
+  }
+  
+  async hideContent(contentType: string, contentId: string, reason: string): Promise<void> {
+    return this.post(`/content/${contentType}/${contentId}/hide`, { reason });
+  }
+  
+  async deleteContent(contentType: string, contentId: string, reason: string): Promise<void> {
+    return this.delete(`/content/${contentType}/${contentId}`, { data: { reason } });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // USER MANAGEMENT APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getUsers(filters?: UserFilters): Promise<PaginatedResponse<AdminUser>> {
+    return this.getWithMeta<AdminUser[]>('/users', { params: filters });
+  }
+  
+  async warnUser(userId: string, reason: string): Promise<void> {
+    return this.post(`/users/${userId}/warn`, { reason });
+  }
+  
+  async suspendUser(userId: string, duration: string, reason: string): Promise<void> {
+    return this.post(`/users/${userId}/suspend`, { duration, reason });
+  }
+  
+  async banUser(userId: string, reason: string): Promise<void> {
+    return this.post(`/users/${userId}/ban`, { reason });
+  }
+  
+  async updateUserRoles(userId: string, roles: string[]): Promise<void> {
+    return this.put(`/users/${userId}/roles`, { roles });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FINANCIAL APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getPendingPayouts(): Promise<PendingPayout[]> {
+    return this.get<PendingPayout[]>('/payouts/pending');
+  }
+  
+  async approvePayout(payoutId: string): Promise<void> {
+    return this.post(`/payouts/${payoutId}/approve`);
+  }
+  
+  async rejectPayout(payoutId: string, reason: string): Promise<void> {
+    return this.post(`/payouts/${payoutId}/reject`, { reason });
+  }
+  
+  async processRefund(transactionId: string, reason: string): Promise<void> {
+    return this.post('/refunds', { transactionId, reason });
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYSTEM MANAGEMENT APIs
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  async getCategories(): Promise<Category[]> {
+    return this.get<Category[]>('/categories');
+  }
+  
+  async createCategory(data: CreateCategoryData): Promise<Category> {
+    return this.post<Category>('/categories', data);
+  }
+  
+  async updateCategory(categoryId: string, data: UpdateCategoryData): Promise<Category> {
+    return this.put<Category>(`/categories/${categoryId}`, data);
+  }
+  
+  async getAuditLogs(filters?: AuditLogFilters): Promise<PaginatedResponse<AuditLog>> {
+    return this.getWithMeta<AuditLog[]>('/audit-logs', { params: filters });
+  }
+}
+
+export const adminService = new AdminService();
+```
+
+---
+
+## 11. Extended Type Definitions
+
+### 11.1 User Types
+
+```typescript
+// features/users/types/index.ts
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  fontSize: 'small' | 'medium' | 'large';
+  lineHeight: 'compact' | 'normal' | 'relaxed';
+  fontFamily: string;
+  readingMode: 'scroll' | 'paginated';
+  autoBookmark: boolean;
+  showMatureContent: boolean;
+}
+
+export interface AuthorApplication {
+  penName: string;
+  bio: string;
+  genres: string[];
+  experience: string;
+  sampleWork?: string;
+}
+```
+
+### 11.2 Interaction Types
+
+```typescript
+// features/interactions/types/index.ts
+
+export interface Review {
+  id: string;
+  storyId: string;
+  userId: string;
+  user: UserSummary;
+  rating: number;
+  title?: string;
+  content: string;
+  hasSpoilers: boolean;
+  helpfulCount: number;
+  notHelpfulCount: number;
+  userVote?: 'helpful' | 'not_helpful';
+  status: 'VISIBLE' | 'HIDDEN' | 'DELETED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReviewData {
+  rating: number;
+  title?: string;
+  content: string;
+  hasSpoilers?: boolean;
+}
+
+export interface UpdateReviewData {
+  rating?: number;
+  title?: string;
+  content?: string;
+  hasSpoilers?: boolean;
+}
+
+export interface ReviewFilters {
+  page?: number;
+  size?: number;
+  sort?: 'newest' | 'oldest' | 'helpful' | 'rating_high' | 'rating_low';
+  rating?: number;
+}
+
+export interface Comment {
+  id: string;
+  chapterId: string;
+  userId: string;
+  user: UserSummary;
+  parentId?: string;
+  content: string;
+  likeCount: number;
+  isLiked: boolean;
+  replyCount: number;
+  depth: number; // max 3 levels (Backend: 04_INTERACTIONS_COMPONENT)
+  status: 'VISIBLE' | 'HIDDEN' | 'DELETED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCommentData {
+  chapterId: string;
+  content: string;
+  parentId?: string;
+}
+
+export interface CommentFilters {
+  page?: number;
+  size?: number;
+  sort?: 'newest' | 'oldest' | 'popular';
+}
+
+export interface ReportData {
+  reason: 'SPAM' | 'HARASSMENT' | 'HATE_SPEECH' | 'VIOLENCE' | 'COPYRIGHT' | 'OTHER';
+  description?: string;
+}
+```
+
+### 11.3 Reading List Types
+
+```typescript
+// features/library/types/index.ts
+
+export interface ReadingList {
+  id: string;
+  name: string;
+  description?: string;
+  isPublic: boolean;
+  isDefault: boolean; // Backend: 04_INTERACTIONS_COMPONENT - is_default
+  storyCount: number;
+  coverUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReadingListDetail extends ReadingList {
+  stories: Story[];
+}
+
+export interface CreateReadingListData {
+  name: string;
+  description?: string;
+  isPublic?: boolean;
+}
+
+export interface UpdateReadingListData {
+  name?: string;
+  description?: string;
+  isPublic?: boolean;
+}
+```
+
+### 11.4 Reading Progress Types
+
+```typescript
+// features/readings/types/index.ts
+
+export interface ReadingProgress {
+  storyId: string;
+  currentChapterId: string;
+  chapterIndex: number;
+  scrollPosition: number;
+  completedChapters: number;
+  totalChapters: number;
+  completionPercent: number;
+  lastReadAt: string;
+}
+
+export interface UpdateProgressData {
+  currentChapterId: string;
+  scrollPosition?: number;
+}
+
+export interface ReadingHistory {
+  storyId: string;
+  story: StorySummary;
+  currentChapterIndex: number;
+  completionPercent: number;
+  lastReadAt: string;
+}
+
+export interface ReadingStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastReadDate: string;
+  streakStartedAt: string;
+}
+
+export interface ReadingGoal {
+  dailyMinutesGoal: number;
+  dailyChaptersGoal: number;
+  weeklyChaptersGoal: number;
+  isActive: boolean;
+}
+
+export interface ChapterBookmark {
+  id: string;
+  chapterId: string;
+  position: number;
+  note?: string;
+  createdAt: string;
+}
+```
+
+### 11.5 Notification Types
+
+```typescript
+// features/notifications/types/index.ts
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  data: Record<string, any>;
+  isRead: boolean;
+  readAt?: string;
+  actorId?: string;
+  actor?: UserSummary;
+  targetType?: string;
+  targetId?: string;
+  createdAt: string;
+}
+
+export type NotificationType = 
+  | 'NEW_CHAPTER'
+  | 'NEW_FOLLOWER'
+  | 'STORY_LIKE'
+  | 'STORY_REVIEW'
+  | 'COMMENT_REPLY'
+  | 'COMMENT_LIKE'
+  | 'DONATION_RECEIVED'
+  | 'PAYOUT_PROCESSED'
+  | 'STREAK_MILESTONE'
+  | 'SYSTEM_ANNOUNCEMENT';
+
+export type NotificationCategory = 
+  | 'SOCIAL'
+  | 'STORY_UPDATES'
+  | 'PAYMENTS'
+  | 'SYSTEM';
+
+export interface NotificationPreferences {
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  inAppEnabled: boolean;
+  categorySettings: Record<NotificationCategory, boolean>;
+  quietHoursStart?: string; // HH:mm format
+  quietHoursEnd?: string;
+  quietHoursTimezone?: string;
+  digestFrequency: 'NONE' | 'DAILY' | 'WEEKLY';
+}
+```
+
+### 11.6 Payment Types (Extended)
+
+```typescript
+// features/payments/types/index.ts
+
+export interface Wallet {
+  id: string;
+  coinBalance: number;
+  earningsBalance: number; // For authors (Backend: 03_PAYMENTS_COMPONENT)
+  heldAmount: number;
+  currency: string;
+  updatedAt: string;
+}
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  balance: number;
+  description: string;
+  referenceType?: string;
+  referenceId?: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  createdAt: string;
+}
+
+export type TransactionType = 
+  | 'TOPUP'
+  | 'CHAPTER_UNLOCK'
+  | 'DONATION_SENT'
+  | 'DONATION_RECEIVED'
+  | 'SUBSCRIPTION'
+  | 'PAYOUT'
+  | 'REFUND';
+
+export interface TransactionFilters {
+  page?: number;
+  size?: number;
+  type?: TransactionType;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CoinPackage {
+  id: string;
+  name: string;
+  coins: number;
+  price: number;
+  currency: string;
+  bonusCoins: number;
+  discountPercent: number;
+  isPopular: boolean;
+}
+
+export interface TopUpRequest {
+  packageId: string;
+  paymentMethod: 'STRIPE' | 'PAYPAL' | 'MOMO';
+  discountCode?: string;
+}
+
+export interface Donation {
+  id: string;
+  donorId: string;
+  donor?: UserSummary;
+  recipientId: string;
+  recipient?: UserSummary;
+  storyId?: string;
+  story?: StorySummary;
+  amount: number;
+  message?: string;
+  isAnonymous: boolean;
+  createdAt: string;
+}
+
+export interface EarningsSummary {
+  totalEarnings: number;
+  availableBalance: number;
+  pendingPayouts: number;
+  thisMonthEarnings: number;
+  lastMonthEarnings: number;
+  earningsBySource: {
+    chapterUnlocks: number;
+    donations: number;
+    subscriptions: number;
+  };
+}
+
+export interface PayoutRequest {
+  id: string;
+  amount: number;
+  payoutMethod: string;
+  status: 'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+  requestedAt: string;
+  processedAt?: string;
+  rejectionReason?: string;
+}
+```
+
+---
+
+## 12. WebSocket Event Types (Backend: 06_REALTIME_AND_EVENTS)
+
+```typescript
+// lib/websocket/types.ts
+
+export type WebSocketEvent = 
+  | NotificationEvent
+  | CommentEvent
+  | ChapterEvent
+  | WalletEvent
+  | StreakEvent;
+
+export interface NotificationEvent {
+  type: 'NOTIFICATION';
+  payload: Notification;
+}
+
+export interface CommentEvent {
+  type: 'NEW_COMMENT' | 'COMMENT_DELETED';
+  payload: {
+    chapterId: string;
+    comment?: Comment;
+    commentId?: string;
+  };
+}
+
+export interface ChapterEvent {
+  type: 'CHAPTER_PUBLISHED' | 'CHAPTER_UPDATED';
+  payload: {
+    storyId: string;
+    chapterId: string;
+    chapterIndex: number;
+    title: string;
+  };
+}
+
+export interface WalletEvent {
+  type: 'WALLET_CREDITED' | 'WALLET_DEBITED';
+  payload: {
+    amount: number;
+    newBalance: number;
+    transactionType: TransactionType;
+  };
+}
+
+export interface StreakEvent {
+  type: 'STREAK_MILESTONE' | 'STREAK_AT_RISK';
+  payload: {
+    currentStreak: number;
+    milestone?: number;
+  };
+}
+
+// WebSocket channel subscription
+export interface ChannelSubscription {
+  channel: 'user' | 'story' | 'chapter';
+  id: string;
+}
+```
+
+---
+
+## 13. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-01-04 | Frontend Architecture Team | Initial release |
+| 2.0 | 2026-01-05 | Frontend Architecture Team | Added complete service layer aligned with Backend API Catalog |
+
+---
+
+## 14. Related Documents
 
 - [04_STATE_MANAGEMENT.md](./04_STATE_MANAGEMENT.md) - State management with React Query
 - [05_ROUTING_NAVIGATION.md](./05_ROUTING_NAVIGATION.md) - Route definitions
 - [10_SECURITY_COMPLIANCE.md](./10_SECURITY_COMPLIANCE.md) - Security patterns
+- [Backend 13_API_CATALOG.md](../../Backend/N9/Documentation/Specification/13_API_CATALOG.md) - Backend API Reference
+- [Backend 03_PAYMENTS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/03_PAYMENTS_COMPONENT.md) - Payment System Design
+- [Backend 04_INTERACTIONS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) - Interactions Design
+- [Backend 05_READINGS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/05_READINGS_COMPONENT.md) - Reading Progress Design
+- [Backend 07_NOTIFICATIONS_COMPONENT.md](../../Backend/N9/Documentation/BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) - Notifications Design
+- [Backend 06_REALTIME_AND_EVENTS.md](../../Backend/N9/Documentation/Specification/06_REALTIME_AND_EVENTS.md) - Event System

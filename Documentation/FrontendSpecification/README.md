@@ -9,16 +9,43 @@
 | 01 | [System Overview](./01_SYSTEM_OVERVIEW.md) | Platform vision, user personas, feature matrix | ✅ Complete |
 | 02 | [Frontend Architecture](./02_FRONTEND_ARCHITECTURE.md) | 4-layer architecture, project structure, patterns | ✅ Complete |
 | 03 | [Design System](./03_DESIGN_SYSTEM.md) | Colors, typography, spacing, animations | ✅ Complete |
-| 04 | [State Management](./04_STATE_MANAGEMENT.md) | TanStack Query, Zustand stores, form state | ✅ Complete |
+| 04 | [State Management](./04_STATE_MANAGEMENT.md) | TanStack Query, Zustand stores, form state, WebSocket sync | ✅ v2.0 |
 | 05 | [Routing & Navigation](./05_ROUTING_NAVIGATION.md) | Route hierarchy, guards, navigation | ✅ Complete |
-| 06 | [API Integration](./06_API_INTEGRATION.md) | HTTP client, services, WebSocket | ✅ Complete |
-| 07 | [Components Library](./07_COMPONENTS_LIBRARY.md) | Primitive, composite, feature components | ✅ Complete |
-| 08 | [Pages Specification](./08_PAGES_SPECIFICATION.md) | Page layouts, wireframes, SEO | ✅ Complete |
+| 06 | [API Integration](./06_API_INTEGRATION.md) | HTTP client, 9 domain services, WebSocket events | ✅ v2.0 |
+| 07 | [Components Library](./07_COMPONENTS_LIBRARY.md) | Primitive, composite, feature components (50+ components) | ✅ v2.0 |
+| 08 | [Pages Specification](./08_PAGES_SPECIFICATION.md) | Page layouts, wireframes, SEO, Admin dashboard | ✅ v2.0 |
 | 09 | [Performance Optimization](./09_PERFORMANCE_OPTIMIZATION.md) | Bundle splitting, caching, Core Web Vitals | ✅ Complete |
 | 10 | [Security & Compliance](./10_SECURITY_COMPLIANCE.md) | XSS, CSRF, RBAC, GDPR | ✅ Complete |
 | 11 | [Testing Strategy](./11_TESTING_STRATEGY.md) | Unit, integration, E2E testing | ✅ Complete |
 | 12 | [Accessibility & i18n](./12_ACCESSIBILITY_I18N.md) | WCAG compliance, internationalization | ✅ Complete |
 | 13 | [Deployment & CI/CD](./13_DEPLOYMENT_CI_CD.md) | GitHub Actions, Azure, monitoring | ✅ Complete |
+
+---
+
+## Backend Alignment
+
+This Frontend Specification is fully aligned with the Backend Design documents:
+
+| Frontend Document | Backend Reference |
+|-------------------|-------------------|
+| [06_API_INTEGRATION.md](./06_API_INTEGRATION.md) | [13_API_CATALOG.md](../BackendSpecification/13_API_CATALOG.md) - 142+ endpoints across 9 domains |
+| [04_STATE_MANAGEMENT.md](./04_STATE_MANAGEMENT.md) | [06_REALTIME_AND_EVENTS.md](../BackendSpecification/06_REALTIME_AND_EVENTS.md) - WebSocket events |
+| [07_COMPONENTS_LIBRARY.md](./07_COMPONENTS_LIBRARY.md) | [03_PAYMENTS_COMPONENT.md](../BackendDesign/Components/03_PAYMENTS_COMPONENT.md), [04_INTERACTIONS_COMPONENT.md](../BackendDesign/Components/04_INTERACTIONS_COMPONENT.md) |
+| [08_PAGES_SPECIFICATION.md](./08_PAGES_SPECIFICATION.md) | [05_READINGS_COMPONENT.md](../BackendDesign/Components/05_READINGS_COMPONENT.md), [07_NOTIFICATIONS_COMPONENT.md](../BackendDesign/Components/07_NOTIFICATIONS_COMPONENT.md) |
+
+### API Coverage
+
+| Domain | Endpoints | Frontend Service |
+|--------|-----------|------------------|
+| Auth | 12 | `AuthService` |
+| Users | 18 | `UserService` |
+| Stories | 22 | `StoryService` |
+| Chapters | 15 | `ChapterService` |
+| Interactions | 20 | `InteractionService`, `ReadingListService` |
+| Payments | 16 | `PaymentService` |
+| Search | 6 | `SearchService` |
+| Notifications | 8 | `NotificationService` |
+| Admin | 25 | `AdminService` |
 
 ---
 
@@ -71,7 +98,7 @@ All specification documents follow these conventions:
 5. **Diagrams** - ASCII architecture diagrams
 6. **Checklists** - Implementation verification
 7. **Revision History** - Change tracking
-8. **Related Documents** - Cross-references
+8. **Related Documents** - Cross-references to Backend Design
 
 ### Code Style
 
@@ -127,15 +154,22 @@ All specification documents follow these conventions:
 
 | Attribute | Value |
 |-----------|-------|
-| Specification Version | 1.0 |
+| Specification Version | 2.0 |
 | Created | 2026-01-04 |
-| Last Updated | 2026-01-04 |
+| Last Updated | 2026-01-05 |
 | Maintained By | Frontend Architecture Team |
+
+### Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.0 | 2026-01-05 | Major alignment update - Extended API Integration with 9 domain services (142+ endpoints), added 4 new state stores, 11 new feature components, expanded pages with Admin dashboard, Author Earnings, Notifications. Full backend design document cross-references. |
+| 1.0 | 2026-01-04 | Initial specification release |
 
 ---
 
 ## Related Documentation
 
-- **Backend Specification** - [../Specification/](../Specification/)
-- **Backend Design** - [../../Backend/Documentation/BackendDesign/](../../Backend/Documentation/BackendDesign/)
+- **Backend Specification** - [../BackendSpecification/](../BackendSpecification/)
+- **Backend Design Components** - [../BackendDesign/Components/](../BackendDesign/Components/)
 - **Frontend Design** - [../FrontendDesign/](../FrontendDesign/)

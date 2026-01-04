@@ -4,11 +4,13 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Version | 1.0 |
-| Last Updated | 2025-12-31 |
+| Version | 2.0 |
+| Last Updated | 2026-01-05 |
 | Status | Approved |
 | Owner | Frontend Engineering Team |
 | Review Cycle | Quarterly |
+| Specification | [08_PAGES_SPECIFICATION.md](../FrontendSpecification/08_PAGES_SPECIFICATION.md) |
+| Backend Reference | [02_STORIES_COMPONENT.md](../../BackendSpecification/Components/02_STORIES_COMPONENT.md), [03_PAYMENTS_COMPONENT.md](../../BackendSpecification/Components/03_PAYMENTS_COMPONENT.md) |
 
 ---
 
@@ -54,7 +56,11 @@ This document specifies the **author dashboard pages** for the N9 platform, incl
 | `/author/analytics` | GET | Overall analytics |
 | `/author/stories/:id/analytics` | GET | Story analytics |
 | `/author/earnings` | GET | Earnings summary |
-| `/author/earnings/payout` | POST | Request payout |
+| `/author/earnings/history` | GET | Earnings transaction history |
+| `/author/payouts` | POST | Request payout |
+| `/author/payouts/methods` | GET/POST | Payout method management |
+
+> **Note**: For detailed Author Earnings pages design, see [07_PAYMENT_WALLET_PAGES.md](./07_PAYMENT_WALLET_PAGES.md#13-author-earnings-pages-backend-03_payments_component)
 
 ---
 
@@ -858,11 +864,24 @@ function useAutoSave(content: string, chapterId?: string) {
 |----------|---------|
 | [01_FRONTEND_ARCHITECTURE.md](../01_FRONTEND_ARCHITECTURE.md) | Project structure |
 | [02_DESIGN_SYSTEM_GUIDELINES.md](../02_DESIGN_SYSTEM_GUIDELINES.md) | UI components |
-| [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns |
+| [03_STATE_MANAGEMENT_ROUTING.md](../03_STATE_MANAGEMENT_ROUTING.md) | State patterns (ChapterEditorStore) |
+| [04_SHARED_COMPONENTS.md](../04_SHARED_COMPONENTS.md) | Shared components |
+| [07_PAYMENT_WALLET_PAGES.md](./07_PAYMENT_WALLET_PAGES.md) | Author Earnings pages (detailed design) |
 
-### 12.2 Backend APIs
+### 12.2 Backend References
 
 | Document | Purpose |
 |----------|---------|
+| [02_STORIES_COMPONENT.md](../../BackendSpecification/Components/02_STORIES_COMPONENT.md) | Story/Chapter management |
+| [03_PAYMENTS_COMPONENT.md](../../BackendSpecification/Components/03_PAYMENTS_COMPONENT.md) | Author earnings & payouts |
 | [13_API_CATALOG.md](../../Specification/13_API_CATALOG.md) | Author endpoints |
 | [04_FUNCTIONAL_REQUIREMENTS.md](../../Specification/04_FUNCTIONAL_REQUIREMENTS.md) | Author features |
+
+---
+
+## 13. Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-31 | Frontend Engineering Team | Initial author dashboard pages design |
+| 2.0 | 2026-01-05 | Frontend Engineering Team | Added backend references, linked to Author Earnings pages in Payment document, updated API endpoints with earnings history and payout methods. |
